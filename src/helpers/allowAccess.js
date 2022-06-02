@@ -10,11 +10,11 @@ function validateJwt(req, secrets) {
   const headers = req.headers
 
   if (!headers.authorization) {
-    throw new BackendError('AUTHENTICATION_ERROR', 'Authorization header is missing.')
+    throw new AuthenticationError('Authorization header is missing.')
   }
 
   if (!headers.authorization.startsWith('Bearer ')) {
-    throw new BackendError('AUTHENTICATION_ERROR', 'Authorization header should use the \'Bearer\' schema.')
+    throw new AuthenticationError('Authorization header should use the \'Bearer\' schema.')
   }
 
   const token = headers.authorization.substring(7)
@@ -25,7 +25,7 @@ function validateJwt(req, secrets) {
     } catch (e) {}
   }
 
-  throw new BackendError('AUTHORIZATION_ERROR', 'Authorization failed.')
+  throw new AuthorizationError('Authorization failed.')
 }
 
 /*
@@ -42,10 +42,6 @@ accessList: array of objects
 */
 
 export default (req, secrets, accessList) => {
-  // check if bearer token -> if not 401 (on req.headers.authorization)
-  // check if the token can be decoded with a secret -> if not 403
-  // check if the token's body satisfies at least one of the things in the accessList
-
   const accessTokenData = validateJwt(req, secrets)
 
   const hasAccess = accessList.some(item => {
@@ -55,7 +51,7 @@ export default (req, secrets, accessList) => {
   })
 
   if (!hasAccess) {
-    throw new BackendError('AUTHORIZATION_ERROR', 'Permission denied.')
+    throw new AuthorizationError('Permission denied.')
   }
   return accessTokenData
 }
