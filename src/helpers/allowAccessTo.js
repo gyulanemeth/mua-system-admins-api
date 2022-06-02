@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken'
 import AuthenticationError from '../errors/AuthenticationError.js'
 import AuthorizationError from '../errors/AuthorizationError.js'
 
-function validateJwt(req, secrets) {
+function validateJwt (req, secrets) {
   const headers = req.headers
 
   if (!headers.authorization) {
@@ -25,7 +25,7 @@ function validateJwt(req, secrets) {
   throw new AuthorizationError('Authorization failed.')
 }
 
-function checkAccessObject(accessObj, accessTokenData) {
+function checkAccessObject (accessObj, accessTokenData) {
   return Object.keys(accessObj).reduce((hasAccess, key) => {
     if (!accessTokenData[key]) {
       return false
@@ -34,7 +34,7 @@ function checkAccessObject(accessObj, accessTokenData) {
     if (typeof accessObj[key] === 'object') {
       return hasAccess && checkAccessObject(accessObj[key], accessTokenData[key])
     }
-    
+
     return hasAccess && accessObj[key] === accessTokenData[key]
   }, true)
 }
@@ -49,4 +49,3 @@ export default (req, secrets, accessList) => {
   }
   return accessTokenData
 }
-

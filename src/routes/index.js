@@ -5,7 +5,7 @@ import login from './login.js'
 import invitation from './invitation.js'
 import forgotPassword from './forgotPassword.js'
 
-export default() => {
+export default () => {
   const apiServer = createApiServer(() => {}, () => {})
 
   admins(apiServer)
