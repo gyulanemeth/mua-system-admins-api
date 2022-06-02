@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "express-async-api": "^0.1.0",
+    "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.5",
     "mongoose-crudl": "^0.2.2"
   },

@@ -1,4 +1,4 @@
-describe('/v1/admins/', () => {
+describe('allowAccess', () => {
   test('true', () => {
     expect(true).toBe(true)
   })
