@@ -93,6 +93,42 @@ describe('allowAccessTo', () => {
     expect(() => allowAccessTo(mockReq, secrets, accessList)).not.toThrow()
   })
 
+  test('allowed type with user.id', () => {
+    const token = jwt.sign({ type: 'user', user: { id: 2 } }, secrets[0])
+
+    const mockReq = { headers: { authorization: `Bearer ${token}` } }
+    const accessList = [
+      { type: 'backend' },
+      { type: 'user', user: { id: 2 } }
+    ]
+
+    expect(() => allowAccessTo(mockReq, secrets, accessList)).not.toThrow()
+  })
+
+  test('allowed type with user.name.first', () => {
+    const token = jwt.sign({ type: 'user', user: { name: { first: 'test' } } }, secrets[0])
+
+    const mockReq = { headers: { authorization: `Bearer ${token}` } }
+    const accessList = [
+      { type: 'backend' },
+      { type: 'user', user: { name: { first: 'test' } } }
+    ]
+
+    expect(() => allowAccessTo(mockReq, secrets, accessList)).not.toThrow()
+  })
+
+  test('user.name.first does not exist on token -> permission denied', () => {
+    const token = jwt.sign({ type: 'user', user: {} }, secrets[0])
+
+    const mockReq = { headers: { authorization: `Bearer ${token}` } }
+    const accessList = [
+      { type: 'backend' },
+      { type: 'user', user: { name: { first: 'test' } } }
+    ]
+
+    expect(() => allowAccessTo(mockReq, secrets, accessList)).toThrow(new AuthorizationError('Permission denied.'))
+  })
+
   test('returns the content of the token', () => {
     const token = jwt.sign({ type: 'user', accountId: 4 }, secrets[0])
 

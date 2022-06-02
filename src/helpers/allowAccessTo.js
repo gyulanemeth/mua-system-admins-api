@@ -25,15 +25,24 @@ function validateJwt(req, secrets) {
   throw new AuthorizationError('Authorization failed.')
 }
 
+function checkAccessObject(accessObj, accessTokenData) {
+  return Object.keys(accessObj).reduce((hasAccess, key) => {
+    if (!accessTokenData[key]) {
+      return false
+    }
+
+    if (typeof accessObj[key] === 'object') {
+      return hasAccess && checkAccessObject(accessObj[key], accessTokenData[key])
+    }
+    
+    return hasAccess && accessObj[key] === accessTokenData[key]
+  }, true)
+}
+
 export default (req, secrets, accessList) => {
   const accessTokenData = validateJwt(req, secrets)
 
-  console.log('WTF', accessList, accessTokenData)
-  const hasAccess = accessList.some(item => {
-    return Object.keys(item).reduce((hasAccess, key) => {
-      return hasAccess && item[key] === accessTokenData[key]
-    }, true)
-  })
+  const hasAccess = accessList.some(item => checkAccessObject(item, accessTokenData))
 
   if (!hasAccess) {
     throw new AuthorizationError('Permission denied.')
