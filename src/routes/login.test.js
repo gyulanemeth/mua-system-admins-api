@@ -1,5 +1,5 @@
 describe('/v1/login/', () => {
-  test('true', {
+  test('true', () => {
     expect(true).toBe(true)
   })
 })

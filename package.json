@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "npx standard",
     "lint-fix": "npx standard --fix",
-    "test": "npm run lint && node --experimental-vm-modules node_modules/jest/bin/jest.js --collect-coverage",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --collect-coverage",
     "test-brk": "node --inspect-brk --experimental-vm-modules node_modules/jest/bin/jest.js",
     "serve": "cd src; node index.js"
   },
@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "express-async-api": "^0.1.0",
+    "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.5",
     "mongoose-crudl": "^0.2.2"
   },
