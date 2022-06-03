@@ -59,8 +59,8 @@ describe('/v1/login/ ', () => {
             .post('/v1/tasks/')
             .send({email: "user3@gmail.com", password: user1.password })
             console.log(res.body);
-            expect(res).not.toThrow()
-          expect(res.body.status).toBe(200)
+            expect(res).not.toThrow(new AuthenticationError('Invalid email or password'))
+          expect(res.body.status).toBe(401)
         })
 
         test('login with wronge password', async () => {
@@ -77,8 +77,8 @@ describe('/v1/login/ ', () => {
               .post('/v1/tasks/')
               .send({email: user1.email, password: user2.password })
               console.log(res.body);
-              expect(res).not.toThrow()
-            expect(res.body.status).toBe(200)
+              expect(res).not.toThrow(new AuthenticationError('Invalid email or password'))
+            expect(res.body.status).toBe(401)
           })
 
 
