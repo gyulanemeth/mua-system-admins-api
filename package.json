@@ -47,7 +47,8 @@
   "devDependencies": {
     "jest": "^28.1.0",
     "mongoose-memory": "^1.0.0",
-    "standard": "^17.0.0"
+    "standard": "^17.0.0",
+    "supertest": "^6.2.3"
   },
   "author": "GYN",
   "license": "MIT"
