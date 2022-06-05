@@ -1,7 +1,9 @@
 import { list, readOne, patchOne } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
+import Email from '../models/Email.js'
 import allowAccessTo from '../helpers/allowAccessTo.js'
-import NotFoundError from '../errors/NotFoundError.js'
+import AuthenticationError from '../errors/AuthenticationError.js'
+import ValidationError from '../errors/ValidationError.js'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 
@@ -9,21 +11,19 @@ export default (apiServer) => {
   const secrets = process.env.SECRETS.split(' ')
 
   apiServer.post('/v1/forgot-password/send', async req => {
-    const response = await list(AdminModel, req.params, req.query)
-    if (response.result.items.length === 0) {
-      throw new NotFoundError(' User does not exist')
+    const response = await list(AdminModel, req.body, req.query)
+    if (response.result.count === 0) {
+      throw new AuthenticationError('Check user name')
     }
-
     const payload = {
-      type: 'forgotPasswordToken',
+      type: 'forgot-password',
       user: {
         _id: response.result.items[0]._id,
         email: response.result.items[0].email
       }
     }
     const token = 'Bearer ' + jwt.sign(payload, secrets[0])
-    console.log(token)
-    // call mail
+    Email("example@example.com", "forget password link ", `<h1>here is ur token: ${token}</h1>`)
     return {
       status: 200,
       result: {
@@ -32,17 +32,19 @@ export default (apiServer) => {
     }
   })
 
+
+
   apiServer.post('/v1/forgot-password/reset', async req => {
-    const data = allowAccessTo(req, secrets, [{ type: 'forgotPasswordToken' }])
-    const response = await readOne(AdminModel, { id: data.user._id }, req.query)
-    if (!response.result._id) {
-      throw new NotFoundError('User does not exist')
+    const data = allowAccessTo(req, secrets, [{ type: 'forgot-password' }])
+    const response = await readOne(AdminModel, { id: data.user.id }, req.query)
+
+    if (req.body.password !== req.body.passwordAgain) {
+      throw new ValidationError("Validation error passwords didn't match ")
     }
-    if (response.result._id && req.body.password === req.body.passwordAgain) {
       const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
-      const updatedAdmin = await patchOne(AdminModel, { id: data.user._id }, { password: hash })
+      const updatedAdmin = await patchOne(AdminModel, { id: data.user.id }, { password: hash })
       const payload = {
-        type: 'admin-login',
+        type: 'login',
         user: {
           _id: updatedAdmin.result._id,
           email: updatedAdmin.result.email
@@ -55,6 +57,5 @@ export default (apiServer) => {
           loginToken: token
         }
       }
-    }
   })
 }
