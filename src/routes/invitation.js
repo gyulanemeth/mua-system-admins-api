@@ -29,7 +29,7 @@ export default (apiServer) => {
     const token = 'Bearer ' + jwt.sign(payload, secrets[0])
 
     Email("example@example.com", "invitation link ", `<h1>here is ur token: ${token}</h1>`)
-    
+
 
     return {
       status: 201,
@@ -41,7 +41,6 @@ export default (apiServer) => {
 
   apiServer.post('/v1/invitation/accept', async req => {
     const data = allowAccessTo(req, secrets, [{ type: 'invitation' }])
-
     const response = await readOne(AdminModel, { id: data.user.id}, req.query)
     if (response.result.password) {
       throw new MethodNotAllowedError('User already has a password')

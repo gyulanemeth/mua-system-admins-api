@@ -24,7 +24,7 @@ export default async (to, subject, template) => {
     mailOptions.subject = subject;
     mailOptions.html = template;
     try{
-      let res = await transporter.sendMail(mailOptions)
+      await transporter.sendMail(mailOptions)
       return {
         status:200,
         result:{
