@@ -1,4 +1,4 @@
-import { list, readOne, patchOne } from 'mongoose-crudl'
+import { list, patchOne } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
 import Email from '../models/Email.js'
 import allowAccessTo from '../helpers/allowAccessTo.js'
@@ -23,7 +23,7 @@ export default (apiServer) => {
       }
     }
     const token = 'Bearer ' + jwt.sign(payload, secrets[0])
-    Email("example@example.com", "forget password link ", `<h1>here is ur token: ${token}</h1>`)
+    Email('example@example.com', 'forget password link ', `<h1>here is ur token: ${token}</h1>`)
     return {
       status: 200,
       result: {
@@ -32,30 +32,26 @@ export default (apiServer) => {
     }
   })
 
-
-
   apiServer.post('/v1/forgot-password/reset', async req => {
     const data = allowAccessTo(req, secrets, [{ type: 'forgot-password' }])
-    const response = await readOne(AdminModel, { id: data.user.id }, req.query)
-
     if (req.body.password !== req.body.passwordAgain) {
       throw new ValidationError("Validation error passwords didn't match ")
     }
-      const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
-      const updatedAdmin = await patchOne(AdminModel, { id: data.user.id }, { password: hash })
-      const payload = {
-        type: 'login',
-        user: {
-          _id: updatedAdmin.result._id,
-          email: updatedAdmin.result.email
-        }
+    const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
+    const updatedAdmin = await patchOne(AdminModel, { id: data.user.id }, { password: hash })
+    const payload = {
+      type: 'login',
+      user: {
+        _id: updatedAdmin.result._id,
+        email: updatedAdmin.result.email
       }
-      const token = 'Bearer ' + jwt.sign(payload, secrets[0])
-      return {
-        status: 200,
-        result: {
-          loginToken: token
-        }
+    }
+    const token = 'Bearer ' + jwt.sign(payload, secrets[0])
+    return {
+      status: 200,
+      result: {
+        loginToken: token
       }
+    }
   })
 }

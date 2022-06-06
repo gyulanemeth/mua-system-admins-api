@@ -2,36 +2,35 @@ import nodemailer from 'nodemailer'
 import ValidationError from '../errors/ValidationError.js'
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.ethereal.email",
+  host: 'smtp.ethereal.email',
   port: 587,
   secure: false,
   auth: {
-  user:"myxptkbaysmvoghx@ethereal.email",
-  pass: process.env.Email_Pass
+    user: 'myxptkbaysmvoghx@ethereal.email',
+    pass: process.env.Email_Pass
   }
-});
-
+})
 
 const mailOptions = {
   from: 'testing@gmail.com',
   to: '',
   subject: '', // Subject line
-  html:'', // html body
-};
+  html: '' // html body
+}
 
 export default async (to, subject, template) => {
-    mailOptions.to = to;
-    mailOptions.subject = subject;
-    mailOptions.html = template;
-    try{
-      await transporter.sendMail(mailOptions)
-      return {
-        status:200,
-        result:{
-          success:true,
-        }
-      };
-    }catch(err){
-      return new ValidationError("Check your sending to field")
+  mailOptions.to = to
+  mailOptions.subject = subject
+  mailOptions.html = template
+  try {
+    await transporter.sendMail(mailOptions)
+    return {
+      status: 200,
+      result: {
+        success: true
+      }
     }
+  } catch (err) {
+    return new ValidationError('Check your sending to field')
+  }
 }
