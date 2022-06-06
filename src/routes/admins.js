@@ -13,9 +13,8 @@ export default (apiServer) => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
     response.result.items = response.result.items.map(user => {
-      if (!user.password) { // if user didn't have password that means he still didn't accept the invitation
-        user.invitationAccepted = false
-      }
+      user.invitationAccepted = !!user.password
+      delete user.password
       return user
     })
 

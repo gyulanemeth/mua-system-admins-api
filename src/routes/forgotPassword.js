@@ -1,10 +1,16 @@
 import { list, patchOne } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
-import Email from '../models/Email.js'
+import Email from '../helpers/Email.js'
+import handlebars from 'handlebars'
 import allowAccessTo from 'bearer-jwt-auth'
 import { AuthenticationError, ValidationError } from 'standard-api-errors'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const forgetPassword = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'forgot-password.html'), 'utf8')
 
 export default (apiServer) => {
   const secrets = process.env.SECRETS.split(' ')
@@ -21,8 +27,10 @@ export default (apiServer) => {
         email: response.result.items[0].email
       }
     }
-    const token = 'Bearer ' + jwt.sign(payload, secrets[0])
-    Email('example@example.com', 'forget password link ', `<h1>here is ur token: ${token}</h1>`)
+    const token = jwt.sign(payload, secrets[0])
+    const template = handlebars.compile(forgetPassword)
+    const html = template({ token })
+    Email('example@example.com', 'forget password link', html)
     return {
       status: 200,
       result: {

@@ -23,5 +23,5 @@ export default () => {
   invitation(apiServer)
   forgotPassword(apiServer)
 
-  return apiServer._expressServer
+  return apiServer
 }

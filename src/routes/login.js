@@ -12,7 +12,7 @@ export default (apiServer) => {
     req.body.password = crypto.createHash('md5').update(req.body.password).digest('hex')
     const findUser = await list(AdminModel, req.body, req.query)
     if (findUser.result.count === 0) {
-      return new AuthenticationError('Invalid email or password')
+      throw new AuthenticationError('Invalid email or password')
     }
 
     const payload = {

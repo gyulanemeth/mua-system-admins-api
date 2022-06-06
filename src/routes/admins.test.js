@@ -18,6 +18,7 @@ describe('/v1/admins/ ', () => {
     await mongooseMemoryServer.connect('test-db')
 
     app = createServer()
+    app = app._expressServer
   })
 
   afterEach(async () => {

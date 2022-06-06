@@ -47,6 +47,7 @@
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
     "express-async-api": "^0.2.0",
+    "handlebars": "^4.7.7",
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.5",
     "mongoose-crudl": "^0.3.0",

@@ -1,15 +1,19 @@
 import { readOne, createOne, patchOne, list } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
-import Email from '../models/Email.js'
+import Email from '../helpers/Email.js'
+import handlebars from 'handlebars'
 import allowAccessTo from 'bearer-jwt-auth'
 import crypto from 'crypto'
 import { MethodNotAllowedError, ValidationError } from 'standard-api-errors'
-
+import fs from 'fs'
 import jwt from 'jsonwebtoken'
+import path from 'path'
+import { fileURLToPath } from 'url'
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const Invitation = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'invitation.html'), 'utf8')
 
 export default (apiServer) => {
   const secrets = process.env.SECRETS.split(' ')
-
   apiServer.post('/v1/invitation/send', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, req.query)
@@ -25,9 +29,10 @@ export default (apiServer) => {
         email: newAdmin.result.email
       }
     }
-    const token = 'Bearer ' + jwt.sign(payload, secrets[0])
-
-    Email('example@example.com', 'invitation link ', `<h1>here is ur token: ${token}</h1>`)
+    const token = jwt.sign(payload, secrets[0])
+    const template = handlebars.compile(Invitation)
+    const html = template({ token })
+    Email('example@example.com', 'invitation link ', html)
 
     return {
       status: 201,

@@ -16,6 +16,7 @@ describe('/v1/login/ ', () => {
     await mongooseMemoryServer.connect('test-db')
 
     app = createServer()
+    app = app._expressServer
   })
 
   afterEach(async () => {
