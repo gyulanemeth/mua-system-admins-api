@@ -1,9 +1,8 @@
 import { list, patchOne } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
 import Email from '../models/Email.js'
-import allowAccessTo from '../helpers/allowAccessTo.js'
-import AuthenticationError from '../errors/AuthenticationError.js'
-import ValidationError from '../errors/ValidationError.js'
+import allowAccessTo from 'bearer-jwt-auth'
+import { AuthenticationError, ValidationError } from 'standard-api-errors'
 import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
 

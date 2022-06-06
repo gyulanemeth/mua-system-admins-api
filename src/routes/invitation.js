@@ -1,10 +1,9 @@
 import { readOne, createOne, patchOne, list } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
 import Email from '../models/Email.js'
-import allowAccessTo from '../helpers/allowAccessTo.js'
+import allowAccessTo from 'bearer-jwt-auth'
 import crypto from 'crypto'
-import MethodNotAllowedError from '../errors/MethodNotAllowedError.js'
-import ValidationError from '../errors/ValidationError.js'
+import { MethodNotAllowedError, ValidationError } from 'standard-api-errors'
 
 import jwt from 'jsonwebtoken'
 

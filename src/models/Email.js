@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer'
-import ValidationError from '../errors/ValidationError.js'
+import { ValidationError } from 'standard-api-errors'
 
 const transporter = nodemailer.createTransport({
   host: 'smtp.ethereal.email',

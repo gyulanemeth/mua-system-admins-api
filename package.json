@@ -42,6 +42,7 @@
     }
   },
   "dependencies": {
+    "bearer-jwt-auth": "^1.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.1",
     "express": "^4.18.1",
@@ -49,7 +50,8 @@
     "jsonwebtoken": "^8.5.1",
     "mongoose": "^6.3.5",
     "mongoose-crudl": "^0.3.0",
-    "nodemailer": "^6.7.5"
+    "nodemailer": "^6.7.5",
+    "standard-api-errors": "^0.0.2"
   },
   "devDependencies": {
     "jest": "^28.1.0",

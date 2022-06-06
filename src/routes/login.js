@@ -1,6 +1,6 @@
 import { list } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
-import AuthenticationError from '../errors/AuthenticationError.js'
+import { AuthenticationError } from 'standard-api-errors'
 import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 
