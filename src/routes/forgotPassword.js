@@ -45,7 +45,11 @@ export default (apiServer) => {
       throw new ValidationError("Validation error passwords didn't match ")
     }
     const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
-    const updatedAdmin = await patchOne(AdminModel, { id: data.user.id }, { password: hash })
+    const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
+    if (response.result.count === 0) {
+      throw new AuthenticationError('Check user name')
+    }
+    const updatedAdmin = await patchOne(AdminModel, { id: data.user._id }, { password: hash })
     const payload = {
       type: 'login',
       user: {

@@ -92,7 +92,7 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com' })
     await user2.save()
 
-    const token = jwt.sign({ type: 'invitation', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/invitation/accept')
@@ -110,7 +110,7 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'invitation', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/invitation/accept')
@@ -129,7 +129,7 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/invitation/accept')
@@ -146,12 +146,29 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com' })
     await user2.save()
 
-    const token = jwt.sign({ type: 'invitation', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/invitation/accept')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'user222PasswordUpdated' })
     expect(res.body.status).toBe(400)
+  })
+
+  test('accept invitation user email does not exist /v1/invitation/accept', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const user2 = new Admin({ email: 'user2@gmail.com' })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'invitation', user: { _id: user1._id, email: 'user4@gmail.com' } }, secrets[0])
+
+    const res = await request(app)
+      .post('/v1/invitation/accept')
+      .set('authorization', 'Bearer ' + token)
+      .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
+    expect(res.body.status).toBe(401)
   })
 })

@@ -69,7 +69,7 @@ describe('/v1/forgot-password/', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'forgot-password', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/forgot-password/reset')
@@ -87,7 +87,7 @@ describe('/v1/forgot-password/', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'forgot-password', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/forgot-password/reset')
@@ -105,12 +105,24 @@ describe('/v1/forgot-password/', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value', user: { id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
       .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(403)
+  })
+
+  test('reset forget password user email does not exist  /v1/forgot-password/reset', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user1._id, email: 'user4@gmail.com' } }, secrets[0])
+    const res = await request(app)
+      .post('/v1/forgot-password/reset')
+      .set('authorization', 'Bearer ' + token)
+      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+    expect(res.body.status).toBe(401)
   })
 })

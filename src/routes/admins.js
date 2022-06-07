@@ -40,7 +40,7 @@ export default (apiServer) => {
   })
 
   apiServer.get('/v1/admins/:id/access-token', async req => {
-    allowAccessTo(req, secrets, [{ type: 'admin', user: { id: req.params.id } }, { type: 'login', user: { id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
 
     const response = await readOne(AdminModel, { id: req.params.id }, req.query)
     const payload = {
@@ -60,7 +60,7 @@ export default (apiServer) => {
   })
 
   apiServer.patch('/v1/admins/:id/name', async req => {
-    allowAccessTo(req, secrets, [{ type: 'admin', user: { id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
 
     await patchOne(AdminModel, { id: req.params.id }, req.body)
 
@@ -73,7 +73,7 @@ export default (apiServer) => {
   })
 
   apiServer.patch('/v1/admins/:id/password', async req => {
-    allowAccessTo(req, secrets, [{ type: 'admin', user: { id: req.params.id } }]) // check auth
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }]) // check auth
     if (req.body.newPassword !== req.body.newPasswordAgain) { // check password matching
       throw new ValidationError("Validation error passwords didn't match ")
     }

@@ -4,6 +4,7 @@ import admins from './admins.js'
 import login from './login.js'
 import invitation from './invitation.js'
 import forgotPassword from './forgotPassword.js'
+import config from './config.js'
 
 export default () => {
   function errorHandler (e) {
@@ -22,6 +23,6 @@ export default () => {
   login(apiServer)
   invitation(apiServer)
   forgotPassword(apiServer)
-
+  config(apiServer)
   return apiServer
 }

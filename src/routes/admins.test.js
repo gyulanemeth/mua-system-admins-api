@@ -163,7 +163,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'login', user: { id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'login', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -180,7 +180,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -214,7 +214,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { id: user2._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -232,7 +232,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/name')
@@ -252,7 +252,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')
@@ -272,7 +272,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { id: user2._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')
@@ -291,7 +291,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')

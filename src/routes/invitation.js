@@ -1,10 +1,10 @@
-import { readOne, createOne, patchOne, list } from 'mongoose-crudl'
+import { createOne, patchOne, list } from 'mongoose-crudl'
 import AdminModel from '../models/Admin.js'
 import Email from '../helpers/Email.js'
 import handlebars from 'handlebars'
 import allowAccessTo from 'bearer-jwt-auth'
 import crypto from 'crypto'
-import { MethodNotAllowedError, ValidationError } from 'standard-api-errors'
+import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import fs from 'fs'
 import jwt from 'jsonwebtoken'
 import path from 'path'
@@ -44,8 +44,11 @@ export default (apiServer) => {
 
   apiServer.post('/v1/invitation/accept', async req => {
     const data = allowAccessTo(req, secrets, [{ type: 'invitation' }])
-    const response = await readOne(AdminModel, { id: data.user.id }, req.query)
-    if (response.result.password) {
+    const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
+    if (response.result.count === 0) {
+      throw new AuthenticationError('Check user name')
+    }
+    if (response.result.items[0].password) {
       throw new MethodNotAllowedError('User already has a password')
     }
     if (req.body.newPassword !== req.body.newPasswordAgain) { // check password matching
@@ -53,7 +56,7 @@ export default (apiServer) => {
     }
 
     const hash = crypto.createHash('md5').update(req.body.newPasswordAgain).digest('hex')
-    const updatedAdmin = await patchOne(AdminModel, { id: data.user.id }, { password: hash })
+    const updatedAdmin = await patchOne(AdminModel, { id: data.user._id }, { password: hash })
     const payload = {
       type: 'login',
       user: {
