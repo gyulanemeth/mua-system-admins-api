@@ -123,6 +123,6 @@ describe('/v1/forgot-password/', () => {
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
       .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
-    expect(res.body.status).toBe(401)
+    expect(res.body.status).toBe(404)
   })
 })
