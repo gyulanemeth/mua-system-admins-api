@@ -42,7 +42,7 @@ export default (apiServer) => {
   apiServer.get('/v1/admins/:id/access-token', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
 
-    const response = await readOne(AdminModel, { id: req.params.id }, req.query)
+    const response = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
     const payload = {
       type: 'admin',
       user: {

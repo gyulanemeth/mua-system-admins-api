@@ -16,7 +16,7 @@ export default (apiServer) => {
   const secrets = process.env.SECRETS.split(' ')
 
   apiServer.post('/v1/forgot-password/send', async req => {
-    const response = await list(AdminModel, req.body, req.query)
+    const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
       throw new AuthenticationError('Check user name')
     }
