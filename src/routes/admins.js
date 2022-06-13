@@ -54,7 +54,7 @@ export default (apiServer) => {
     return {
       status: 200,
       result: {
-        accessToken: 'Bearer ' + token
+        accessToken: token
       }
     }
   })
