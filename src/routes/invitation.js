@@ -32,12 +32,13 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0])
     const template = handlebars.compile(Invitation)
     const html = template({ token })
-    Email('example@example.com', 'invitation link ', html)
+    const mail = await Email('example@example.com', 'invitation link ', html)
 
     return {
       status: 201,
       result: {
-        success: true
+        success: true,
+        info: mail.result.info
       }
     }
   })
@@ -64,7 +65,7 @@ export default (apiServer) => {
         email: updatedAdmin.result.email
       }
     }
-    const token = 'Bearer ' + jwt.sign(payload, secrets[0])
+    const token = jwt.sign(payload, secrets[0])
     return {
       status: 200,
       result: {

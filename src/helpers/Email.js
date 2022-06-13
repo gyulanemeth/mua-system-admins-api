@@ -5,8 +5,9 @@ const transporter = nodemailer.createTransport({
   host: 'smtp.ethereal.email',
   port: 587,
   secure: false,
+  requireTLS: true,
   auth: {
-    user: 'uwmdi5uch645makp@ethereal.email',
+    user: 'jamil.russel83@ethereal.email',
     pass: process.env.Email_Pass
   }
 })
@@ -23,11 +24,11 @@ export default async (to, subject, template) => {
   mailOptions.subject = subject
   mailOptions.html = template
   try {
-    await transporter.sendMail(mailOptions)
+    const info = await transporter.sendMail(mailOptions).then(res => res)
     return {
       status: 200,
       result: {
-        success: true
+        info
       }
     }
   } catch (err) {
