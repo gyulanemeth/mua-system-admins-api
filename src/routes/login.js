@@ -10,7 +10,8 @@ export default (apiServer) => {
   apiServer.post('/v1/login', async req => {
     req.body.email = req.body.email.toLowerCase()
     req.body.password = crypto.createHash('md5').update(req.body.password).digest('hex')
-    const findUser = await list(AdminModel, req.body, { select: { password: 0 } })
+    const findUser = await list(AdminModel, {email:req.body.email, password: req.body.password}, { select: { password: 0 } })
+    console.log(req.body);
     if (findUser.result.count === 0) {
       throw new AuthenticationError('Invalid email or password')
     }
