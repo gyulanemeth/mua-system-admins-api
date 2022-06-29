@@ -90,7 +90,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(200)
   })
 
@@ -108,7 +108,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userWrongeNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userWrongeNewPassword' })
     expect(res.body.status).toBe(400)
   })
 
@@ -126,7 +126,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(403)
   })
 
@@ -138,7 +138,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(404)
   })
 })

@@ -61,8 +61,8 @@ export default (apiServer) => {
 
   apiServer.patch('/v1/admins/:id/name', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
-    console.log(req.body);
-    await patchOne(AdminModel, { id: req.params.id }, {name:req.body.name})
+
+    await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
 
     return {
       status: 200,
@@ -72,15 +72,14 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.patch('/v1/admins/:id/password', async req => { //////////////////////////Not updating the password
+  apiServer.patch('/v1/admins/:id/password', async req => { /// ///////////////////////Not updating the password
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }]) // check auth
     if (req.body.newPassword !== req.body.newPasswordAgain) { // check password matching
       throw new ValidationError("Validation error passwords didn't match ")
     }
     const hash = crypto.createHash('md5').update(req.body.newPassword).digest('hex') // hash the new password
     const oldHash = crypto.createHash('md5').update(req.body.oldPassword).digest('hex') // hash the new password
-    const test = await patchOne(AdminModel, { id: req.params.id, password: oldHash }, {password:hash}) // update user password
-    console.log(req.body, oldHash, hash, test, req.params);
+    await patchOne(AdminModel, { id: req.params.id, password: oldHash }, { password: hash }) // update user password
     return {
       status: 200,
       result: {

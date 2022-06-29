@@ -1,7 +1,7 @@
 import mongoose from 'mongoose'
 
- import Admin from './models/Admin.js'
- import crypto from 'crypto'
+// import Admin from './models/Admin.js'
+// import crypto from 'crypto'
 import routes from './routes/index.js'
 import dotenv from 'dotenv'
 dotenv.config({ path: '../.env' })

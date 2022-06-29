@@ -30,7 +30,7 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0])
     const template = handlebars.compile(forgetPassword)
     const html = template({ token })
-    console.log(token);
+
     const mail = await Email(response.result.items[0].email, 'forget password link', html)
     return {
       status: 200,
@@ -48,7 +48,6 @@ export default (apiServer) => {
     }
     const hash = crypto.createHash('md5').update(req.body.newPassword).digest('hex')
     const updatedAdmin = await patchOne(AdminModel, { id: data.user._id, email: data.user.email }, { password: hash })
-    console.log(data, req.body, updatedAdmin);
     const payload = {
       type: 'login',
       user: {
