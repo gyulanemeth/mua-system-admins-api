@@ -1,17 +1,6 @@
 import nodemailer from 'nodemailer'
 import { ValidationError } from 'standard-api-errors'
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp.ethereal.email',
-  port: 587,
-  secure: false,
-  requireTLS: true,
-  auth: {
-    user: 'jerrold.bruen59@ethereal.email',
-    pass: process.env.Email_Pass
-  }
-})
-
 const mailOptions = {
   from: 'testing@gmail.com',
   to: '',
@@ -20,17 +9,36 @@ const mailOptions = {
 }
 
 export default async (to, subject, template) => {
-  /*
-  if (process.env.NODE_ENV === 'production') {
-
-  } else {
-    nodemailer.createTestAccount()
-  }
-  */
-  mailOptions.to = to
-  mailOptions.subject = subject
-  mailOptions.html = template
   try {
+    let transporter
+    if (process.env.NODE_ENV === 'production') {
+      transporter = await nodemailer.createTransport(
+        {
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: 'email@gmail.com',
+            pass: '123123123'
+          }
+        })
+    } else {
+      const testAccount = await nodemailer.createTestAccount()
+      transporter = await nodemailer.createTransport(
+        {
+          host: 'smtp.ethereal.email',
+          port: 587,
+          secure: false,
+          auth: {
+            user: testAccount.user,
+            pass: testAccount.pass
+          }
+        })
+    }
+    mailOptions.to = to
+    mailOptions.subject = subject
+    mailOptions.html = template
+
     const info = await transporter.sendMail(mailOptions).then(res => res)
     return {
       status: 200,

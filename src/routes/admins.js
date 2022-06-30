@@ -19,7 +19,6 @@ export default (apiServer) => {
       delete user.password
       return user
     })
-
     return response
   })
 
@@ -32,7 +31,6 @@ export default (apiServer) => {
   apiServer.delete('/v1/admins/:id', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const adminCount = await AdminModel.count({})
-
     if (adminCount === 1) {
       throw new MethodNotAllowedError('Removeing the last admin is not allowed')
     }
@@ -42,7 +40,6 @@ export default (apiServer) => {
 
   apiServer.get('/v1/admins/:id/access-token', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
-
     const response = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
     const payload = {
       type: 'admin',
@@ -62,9 +59,7 @@ export default (apiServer) => {
 
   apiServer.patch('/v1/admins/:id/name', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
-
     await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
-
     return {
       status: 200,
       result: {
