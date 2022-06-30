@@ -20,6 +20,13 @@ const mailOptions = {
 }
 
 export default async (to, subject, template) => {
+  /*
+  if (process.env.NODE_ENV === 'production') {
+
+  } else {
+    nodemailer.createTestAccount()
+  }
+  */
   mailOptions.to = to
   mailOptions.subject = subject
   mailOptions.html = template

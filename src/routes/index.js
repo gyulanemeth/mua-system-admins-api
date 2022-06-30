@@ -24,5 +24,6 @@ export default () => {
   invitation(apiServer)
   forgotPassword(apiServer)
   config(apiServer)
+
   return apiServer
 }

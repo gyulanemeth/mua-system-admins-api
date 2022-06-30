@@ -1,8 +1,9 @@
+import crypto from 'crypto'
+
 import mongoose from 'mongoose'
 import request from 'supertest'
-import crypto from 'crypto'
-import createMongooseMemoryServer from 'mongoose-memory'
 
+import createMongooseMemoryServer from 'mongoose-memory'
 import createServer from './index.js'
 
 import Admin from '../models/Admin.js'
@@ -43,7 +44,7 @@ describe('/v1/login/ ', () => {
     expect(res.body.status).toBe(200)
   })
 
-  test('login with wronge email', async () => {
+  test('login with wrong email', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -55,7 +56,7 @@ describe('/v1/login/ ', () => {
     expect(res.statusCode).toBe(401)
   })
 
-  test('login with wronge password', async () => {
+  test('login with wrong password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()

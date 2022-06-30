@@ -1,19 +1,24 @@
-import { createOne, patchOne, list } from 'mongoose-crudl'
-import AdminModel from '../models/Admin.js'
-import Email from '../helpers/Email.js'
-import handlebars from 'handlebars'
-import allowAccessTo from 'bearer-jwt-auth'
-import crypto from 'crypto'
-import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import fs from 'fs'
-import jwt from 'jsonwebtoken'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
+
+import jwt from 'jsonwebtoken'
+import handlebars from 'handlebars'
+
+import { createOne, patchOne, list } from 'mongoose-crudl'
+import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
+import allowAccessTo from 'bearer-jwt-auth'
+
+import AdminModel from '../models/Admin.js'
+import sendEmail from '../helpers/sendEmail.js'
+
+const secrets = process.env.SECRETS.split(' ')
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const Invitation = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'invitation.html'), 'utf8')
 
 export default (apiServer) => {
-  const secrets = process.env.SECRETS.split(' ')
   apiServer.post('/v1/invitation/send', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
@@ -32,7 +37,7 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0])
     const template = handlebars.compile(Invitation)
     const html = template({ token })
-    const mail = await Email(newAdmin.result.email, 'invitation link ', html)
+    const mail = await sendEmail(newAdmin.result.email, 'invitation link ', html)
 
     return {
       status: 201,

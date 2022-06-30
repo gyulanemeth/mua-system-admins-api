@@ -1,20 +1,24 @@
-import { list, patchOne } from 'mongoose-crudl'
-import AdminModel from '../models/Admin.js'
-import Email from '../helpers/Email.js'
-import handlebars from 'handlebars'
-import allowAccessTo from 'bearer-jwt-auth'
-import { AuthenticationError, ValidationError } from 'standard-api-errors'
-import jwt from 'jsonwebtoken'
-import crypto from 'crypto'
 import fs from 'fs'
 import path from 'path'
 import { fileURLToPath } from 'url'
+import crypto from 'crypto'
+
+import jwt from 'jsonwebtoken'
+import handlebars from 'handlebars'
+
+import { list, patchOne } from 'mongoose-crudl'
+import { AuthenticationError, ValidationError } from 'standard-api-errors'
+import allowAccessTo from 'bearer-jwt-auth'
+
+import AdminModel from '../models/Admin.js'
+import sendEmail from '../helpers/sendEmail.js'
+
+const secrets = process.env.SECRETS.split(' ')
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const forgetPassword = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'forgot-password.html'), 'utf8')
 
 export default (apiServer) => {
-  const secrets = process.env.SECRETS.split(' ')
-
   apiServer.post('/v1/forgot-password/send', async req => {
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
@@ -31,7 +35,7 @@ export default (apiServer) => {
     const template = handlebars.compile(forgetPassword)
     const html = template({ token })
 
-    const mail = await Email(response.result.items[0].email, 'forget password link', html)
+    const mail = await sendEmail(response.result.items[0].email, 'forget password link', html)
     return {
       status: 200,
       result: {

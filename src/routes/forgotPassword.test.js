@@ -1,15 +1,17 @@
+import crypto from 'crypto'
+
 import mongoose from 'mongoose'
 import request from 'supertest'
-import crypto from 'crypto'
-import createMongooseMemoryServer from 'mongoose-memory'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 
-import createServer from './index.js'
+import createMongooseMemoryServer from 'mongoose-memory'
 
+import createServer from './index.js'
 import Admin from '../models/Admin.js'
 
 const mongooseMemoryServer = createMongooseMemoryServer(mongoose)
+
 const secrets = process.env.SECRETS.split(' ')
 
 describe('/v1/forgot-password/', () => {

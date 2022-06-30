@@ -1,14 +1,16 @@
-import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
-import jwt from 'jsonwebtoken'
-import AdminModel from '../models/Admin.js'
-import { MethodNotAllowedError, ValidationError } from 'standard-api-errors'
-
-import allowAccessTo from 'bearer-jwt-auth'
 import crypto from 'crypto'
 
-export default (apiServer) => {
-  const secrets = process.env.SECRETS.split(' ')
+import jwt from 'jsonwebtoken'
 
+import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
+import { MethodNotAllowedError, ValidationError } from 'standard-api-errors'
+import allowAccessTo from 'bearer-jwt-auth'
+
+import AdminModel from '../models/Admin.js'
+
+const secrets = process.env.SECRETS.split(' ')
+
+export default (apiServer) => {
   apiServer.get('/v1/admins/', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
@@ -35,7 +37,6 @@ export default (apiServer) => {
       throw new MethodNotAllowedError('Removeing the last admin is not allowed')
     }
     const response = await deleteOne(AdminModel, { id: req.params.id })
-
     return response
   })
 
