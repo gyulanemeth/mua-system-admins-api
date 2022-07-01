@@ -68,14 +68,18 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.patch('/v1/admins/:id/password', async req => { /// ///////////////////////Not updating the password
-    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }]) // check auth
-    if (req.body.newPassword !== req.body.newPasswordAgain) { // check password matching
+  apiServer.patch('/v1/admins/:id/password', async req => {
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
+    if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError("Validation error passwords didn't match ")
     }
-    const hash = crypto.createHash('md5').update(req.body.newPassword).digest('hex') // hash the new password
-    const oldHash = crypto.createHash('md5').update(req.body.oldPassword).digest('hex') // hash the new password
-    await patchOne(AdminModel, { id: req.params.id, password: oldHash }, { password: hash }) // update user password
+    const hash = crypto.createHash('md5').update(req.body.newPassword).digest('hex')
+    const oldHash = crypto.createHash('md5').update(req.body.oldPassword).digest('hex')
+    const getAdmin = await readOne(AdminModel, { id: req.params.id }, req.query)
+    if(oldHash !== getAdmin.result.password){
+      throw new ValidationError("Validation error passwords didn't match ")
+    }
+    await patchOne(AdminModel, { id: req.params.id }, { password: hash })
     return {
       status: 200,
       result: {
