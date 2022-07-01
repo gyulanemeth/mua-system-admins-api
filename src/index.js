@@ -1,10 +1,6 @@
 import mongoose from 'mongoose'
-import dotenv from 'dotenv'
 
 import routes from './routes/index.js'
-
-
-dotenv.config({ path: '../.env' })
 
 const api = routes()
 

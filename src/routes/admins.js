@@ -76,7 +76,7 @@ export default (apiServer) => {
     const hash = crypto.createHash('md5').update(req.body.newPassword).digest('hex')
     const oldHash = crypto.createHash('md5').update(req.body.oldPassword).digest('hex')
     const getAdmin = await readOne(AdminModel, { id: req.params.id }, req.query)
-    if(oldHash !== getAdmin.result.password){
+    if (oldHash !== getAdmin.result.password) {
       throw new ValidationError("Validation error passwords didn't match ")
     }
     await patchOne(AdminModel, { id: req.params.id }, { password: hash })
