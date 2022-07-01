@@ -7,4 +7,5 @@ const AdminSchema = new mongoose.Schema({
   password: { type: String }
 }, { timestamps: true })
 
+AdminSchema.index({ name: 'text', email: 'text' })
 export default mongoose.model('Admin', AdminSchema)

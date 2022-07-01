@@ -1,6 +1,8 @@
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
+
 import createServer from './index.js'
+
 const secrets = process.env.SECRETS.split(' ')
 
 describe('config testing  /v1/config', () => {

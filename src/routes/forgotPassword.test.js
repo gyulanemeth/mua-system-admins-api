@@ -1,15 +1,17 @@
+import crypto from 'crypto'
+
 import mongoose from 'mongoose'
 import request from 'supertest'
-import crypto from 'crypto'
-import createMongooseMemoryServer from 'mongoose-memory'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 
-import createServer from './index.js'
+import createMongooseMemoryServer from 'mongoose-memory'
 
+import createServer from './index.js'
 import Admin from '../models/Admin.js'
 
 const mongooseMemoryServer = createMongooseMemoryServer(mongoose)
+
 const secrets = process.env.SECRETS.split(' ')
 
 describe('/v1/forgot-password/', () => {
@@ -90,7 +92,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(200)
   })
 
@@ -108,7 +110,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userWrongeNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userWrongeNewPassword' })
     expect(res.body.status).toBe(400)
   })
 
@@ -126,7 +128,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(403)
   })
 
@@ -138,7 +140,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ password: 'userNewPassword', passwordAgain: 'userNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(404)
   })
 })
