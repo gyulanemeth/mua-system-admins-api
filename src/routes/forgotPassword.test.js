@@ -110,7 +110,7 @@ describe('/v1/forgot-password/', () => {
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
-      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userWrongeNewPassword' })
+      .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userWrongNewPassword' })
     expect(res.body.status).toBe(400)
   })
 

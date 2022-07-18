@@ -1,20 +1,18 @@
 import nodemailer from 'nodemailer'
 import aws from '@aws-sdk/client-ses'
+import createTextVersion from 'textversionjs'
+
 import { ValidationError } from 'standard-api-errors'
 
 const accessKeyId = process.env.AWS_ACCESS_KEY_ID
 const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
 
-const mailOptions = {
-  from: 'testing@gmail.com',
-  to: '',
-  subject: '', // Subject line
-  html: '' // html body
-}
+const fromEmailAddress = process.env.FROM_EMAIL_ADDRESS
 
-export default async (to, subject, template) => {
+export default async (to, subject, html) => {
   try {
     let transporter
+    /* istanbul ignore else */
     if (process.env.NODE_ENV === 'test') {
       const testAccount = await nodemailer.createTestAccount()
       transporter = await nodemailer.createTransport({
@@ -38,11 +36,14 @@ export default async (to, subject, template) => {
         SES: { ses: sesClient, aws }
       })
     }
-    mailOptions.to = to
-    mailOptions.subject = subject
-    mailOptions.html = template
 
-    const info = await transporter.sendMail(mailOptions).then(res => res)
+    const info = await transporter.sendMail({
+      from: fromEmailAddress,
+      to,
+      subject,
+      html,
+      text: createTextVersion(html)
+    }).then(res => res)
     return {
       status: 200,
       result: {
