@@ -1,5 +1,9 @@
 import nodemailer from 'nodemailer'
+import aws from '@aws-sdk/client-ses'
 import { ValidationError } from 'standard-api-errors'
+
+const accessKeyId = process.env.AWS_ACCESS_KEY_ID
+const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY
 
 const mailOptions = {
   from: 'testing@gmail.com',
@@ -11,29 +15,28 @@ const mailOptions = {
 export default async (to, subject, template) => {
   try {
     let transporter
-    if (process.env.NODE_ENV === 'production') {
-      transporter = await nodemailer.createTransport(
-        {
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: 'email@gmail.com',
-            pass: '123123123'
-          }
-        })
-    } else {
+    if (process.env.NODE_ENV === 'test') {
       const testAccount = await nodemailer.createTestAccount()
-      transporter = await nodemailer.createTransport(
-        {
-          host: 'smtp.ethereal.email',
-          port: 587,
-          secure: false,
-          auth: {
-            user: testAccount.user,
-            pass: testAccount.pass
-          }
-        })
+      transporter = await nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        secure: false,
+        auth: {
+          user: testAccount.user,
+          pass: testAccount.pass
+        }
+      })
+    } else {
+      const sesClient = new aws.SESClient({
+        region: 'us-east-1',
+        credentials: {
+          accessKeyId,
+          secretAccessKey
+        }
+      })
+      transporter = nodemailer.createTransport({
+        SES: { ses: sesClient, aws }
+      })
     }
     mailOptions.to = to
     mailOptions.subject = subject
