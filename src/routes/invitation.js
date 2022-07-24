@@ -34,9 +34,9 @@ export default (apiServer) => {
         email: newAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, secrets[0])
+    const token = jwt.sign(payload, secrets[0], {expiresIn: "24h"})
     const template = handlebars.compile(Invitation)
-    const html = template({ token })
+    const html = template({ href : `${process.env.APP_URL}invitation/accept?token=${token}` })
     const mail = await sendEmail(newAdmin.result.email, 'invitation link ', html)
 
     return {
@@ -62,7 +62,7 @@ export default (apiServer) => {
     }
 
     const hash = crypto.createHash('md5').update(req.body.newPasswordAgain).digest('hex')
-    const updatedAdmin = await patchOne(AdminModel, { id: data.user._id }, { password: hash })
+    const updatedAdmin = await patchOne(AdminModel, { id: data.user._id }, { password: hash, name: req.body.name })
     const payload = {
       type: 'login',
       user: {
@@ -70,7 +70,7 @@ export default (apiServer) => {
         email: updatedAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, secrets[0])
+    const token = jwt.sign(payload, secrets[0], {expiresIn: "24h"})
     return {
       status: 200,
       result: {
