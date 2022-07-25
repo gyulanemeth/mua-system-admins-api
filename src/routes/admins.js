@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 
 import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
-import { MethodNotAllowedError, ValidationError } from 'standard-api-errors'
+import { AuthorizationError, MethodNotAllowedError, ValidationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
@@ -71,13 +71,13 @@ export default (apiServer) => {
   apiServer.patch('/v1/admins/:id/password', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
-      throw new ValidationError("Validation error passwords didn't match ")
+      throw new ValidationError('Validation error passwords didn\'t match.')
     }
     const hash = crypto.createHash('md5').update(req.body.newPassword).digest('hex')
     const oldHash = crypto.createHash('md5').update(req.body.oldPassword).digest('hex')
     const getAdmin = await readOne(AdminModel, { id: req.params.id }, req.query)
     if (oldHash !== getAdmin.result.password) {
-      throw new ValidationError("Validation error passwords didn't match ")
+      throw new AuthorizationError('Wrong password.')
     }
     await patchOne(AdminModel, { id: req.params.id }, { password: hash })
     return {

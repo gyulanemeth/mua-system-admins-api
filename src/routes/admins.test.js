@@ -284,7 +284,7 @@ describe('/v1/admins/ ', () => {
     expect(res.body.status).toBe(403)
   })
 
-  test('update password wronge newPasswordAgain validation error  /v1/admins/:id/password', async () => {
+  test('update password wrong newPasswordAgain validation error  /v1/admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -301,5 +301,25 @@ describe('/v1/admins/ ', () => {
       .send({ oldPassword: 'user1Password', newPassword: 'userPasswordUpdated', newPasswordAgain: 'user11PasswordUpdated' })
 
     expect(res.body.status).toBe(400)
+  })
+
+  test('update password wrong password authorization error  /v1/admins/:id/password', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    const res = await request(app)
+      .patch('/v1/admins/' + user1._id + '/password')
+      .set('authorization', 'Bearer ' + token)
+      .send({ oldPassword: 'user1Password_wrong', newPassword: 'user11PasswordUpdated', newPasswordAgain: 'user11PasswordUpdated' })
+
+    expect(res.body.status).toBe(403)
+    expect(res.body.error.message).toBe('Wrong password.')
   })
 })
