@@ -26,7 +26,7 @@ export default (apiServer) => {
         email: findUser.result.items[0].email
       }
     }
-    const token = jwt.sign(payload, secrets[0])
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     return {
       status: 200,
       result: {
