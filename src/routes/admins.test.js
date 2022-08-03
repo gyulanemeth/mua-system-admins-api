@@ -3,6 +3,7 @@ import crypto from 'crypto'
 import mongoose from 'mongoose'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
+import nodemailer from 'nodemailer'
 
 import createMongooseMemoryServer from 'mongoose-memory'
 
@@ -321,5 +322,74 @@ describe('/v1/admins/ ', () => {
 
     expect(res.body.status).toBe(403)
     expect(res.body.error.message).toBe('Wrong password.')
+  })
+
+  test('success patch email req send  /v1/admins/:id/email', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    const res = await request(app)
+      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com' })
+
+    expect(res.body.status).toBe(200)
+    expect(res.body.result.success).toBe(true)
+
+    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info)
+
+    const html = await fetch(messageUrl).then(response => response.text())
+    const regex = /<a[\s]+id=\\"verifyEmailLink\\"[^\n\r]*\?token&#x3D([^"&]+)">/g
+    const found = html.match(regex)[0]
+    const tokenPosition = found.indexOf('token&#x3D')
+    const endTagPosition = found.indexOf('\\">')
+    const htmlToken = found.substring(tokenPosition + 11, endTagPosition)
+    const verifiedToken = jwt.verify(htmlToken, secrets[0])
+
+    expect(htmlToken).toBeDefined()
+    expect(verifiedToken.type).toBe('verfiy-email')
+    expect(verifiedToken.newEmail).toBe('userUpdate@gmail.com')
+  })
+
+  test('patch email req send error email exist /v1/admins/:id/email', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    const res = await request(app)
+      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'user2@gmail.com' })
+
+    expect(res.body.status).toBe(405)
+  })
+
+  test('update email success /v1/admins/:id/email-confirm', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'verfiy-email', user: { _id: user1._id }, newEmail: 'userUpdate@gmail.com' }, secrets[0])
+
+    const res = await request(app)
+      .patch('/v1/admins/' + user1._id + '/email-confirm')
+      .set('authorization', 'Bearer ' + token)
+      .send()
+
+    expect(res.body.status).toBe(200)
+    expect(res.body.result.success).toBe(true)
   })
 })
