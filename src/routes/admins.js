@@ -1,14 +1,23 @@
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
 import crypto from 'crypto'
 
 import jwt from 'jsonwebtoken'
+import handlebars from 'handlebars'
 
 import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
 import { AuthorizationError, MethodNotAllowedError, ValidationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
+import sendEmail from '../helpers/sendEmail.js'
 
 const secrets = process.env.SECRETS.split(' ')
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const VerifyEmail = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'verifyEmail.html'), 'utf8')
 
 export default (apiServer) => {
   apiServer.get('/v1/admins/', async req => {
@@ -80,6 +89,43 @@ export default (apiServer) => {
       throw new AuthorizationError('Wrong password.')
     }
     await patchOne(AdminModel, { id: req.params.id }, { password: hash })
+    return {
+      status: 200,
+      result: {
+        success: true
+      }
+    }
+  })
+
+  apiServer.patch('/v1/admins/:id/email', async req => {
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
+    const checkExist = await list(AdminModel, { email: req.body.newEmail })
+    if (checkExist.result.count > 0) {
+      throw new MethodNotAllowedError('Email exist')
+    }
+    const response = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
+    const payload = {
+      type: 'verfiy-email',
+      user: response.result,
+      newEmail: req.body.newEmail
+    }
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
+    const template = handlebars.compile(VerifyEmail)
+    const html = template({ href: `${process.env.APP_URL}verify-email?token=${token}` })
+    const mail = await sendEmail(req.body.newEmail, 'verify email link ', html)
+
+    return {
+      status: 200,
+      result: {
+        success: true,
+        info: mail.result.info
+      }
+    }
+  })
+
+  apiServer.patch('/v1/admins/:id/email-confirm', async req => {
+    const data = await allowAccessTo(req, secrets, [{ type: 'verfiy-email', user: { _id: req.params.id } }])
+    await patchOne(AdminModel, { id: req.params.id }, { email: data.newEmail })
     return {
       status: 200,
       result: {
