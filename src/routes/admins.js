@@ -99,6 +99,9 @@ export default (apiServer) => {
 
   apiServer.patch('/v1/admins/:id/email', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
+    if (req.body.newEmail !== req.body.newEmailAgain) {
+      throw new ValidationError('Validation error email didn\'t match.')
+    }
     const checkExist = await list(AdminModel, { email: req.body.newEmail })
     if (checkExist.result.count > 0) {
       throw new MethodNotAllowedError('Email exist')
