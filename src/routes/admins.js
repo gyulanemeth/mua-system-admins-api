@@ -12,7 +12,7 @@ import { AuthorizationError, MethodNotAllowedError, ValidationError } from 'stan
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
-import sendEmail from '../helpers/sendEmail.js'
+import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
 
@@ -115,7 +115,7 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const template = handlebars.compile(VerifyEmail)
     const html = template({ href: `${process.env.APP_URL}verify-email?token=${token}` })
-    const mail = await sendEmail(req.body.newEmail, 'verify email link ', html)
+    const mail = await sendEmail({ to: req.body.newEmail, subject: 'verify email link ', html })
 
     return {
       status: 200,
