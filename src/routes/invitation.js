@@ -11,7 +11,7 @@ import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'sta
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
-import sendEmail from '../helpers/sendEmail.js'
+import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
 
@@ -37,7 +37,7 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const template = handlebars.compile(Invitation)
     const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
-    const mail = await sendEmail(newAdmin.result.email, 'invitation link ', html)
+    const mail = await sendEmail({ to: newAdmin.result.email, subject: 'invitation link ', html })
 
     return {
       status: 201,

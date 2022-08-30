@@ -11,7 +11,7 @@ import { AuthenticationError, ValidationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
-import sendEmail from '../helpers/sendEmail.js'
+import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
 
@@ -34,7 +34,7 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const template = handlebars.compile(forgetPassword)
     const html = template({ href: `${process.env.APP_URL}forgot-password/reset?token=${token}` })
-    const mail = await sendEmail(response.result.items[0].email, 'forget password link', html)
+    const mail = await sendEmail({ to: response.result.items[0].email, subject: 'forget password link', html })
     return {
       status: 200,
       result: {
