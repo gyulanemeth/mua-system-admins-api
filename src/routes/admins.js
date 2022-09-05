@@ -38,10 +38,7 @@ export default (apiServer) => {
   })
 
   apiServer.delete('/v1/admins/:id', async req => {
-    const tokenData = allowAccessTo(req, secrets, [{ type: 'admin' }, { type: 'delete' }])
-    if (tokenData.type === 'admin' && tokenData.user._id === req.params.id) {
-      throw new AuthorizationError('Delete permission needed')
-    }
+    allowAccessTo(req, secrets, [{ type: 'delete' }])
     const adminCount = await AdminModel.count({})
     if (adminCount === 1) {
       throw new MethodNotAllowedError('Removeing the last admin is not allowed')
