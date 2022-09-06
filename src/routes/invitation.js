@@ -6,7 +6,7 @@ import crypto from 'crypto'
 import jwt from 'jsonwebtoken'
 import handlebars from 'handlebars'
 
-import { createOne, patchOne, list } from 'mongoose-crudl'
+import { createOne, patchOne, list, deleteOne } from 'mongoose-crudl'
 import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
@@ -38,6 +38,13 @@ export default (apiServer) => {
     const template = handlebars.compile(Invitation)
     const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
     const mail = await sendEmail({ to: newAdmin.result.email, subject: 'invitation link ', html })
+      .then((response) => {
+        /* istanbul ignore if */
+        if (response.message) {
+          deleteOne(AdminModel, { id: newAdmin.result._id })
+        }
+        return response
+      })
 
     return {
       status: 201,
