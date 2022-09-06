@@ -38,13 +38,9 @@ export default (apiServer) => {
     const template = handlebars.compile(Invitation)
     const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
     const mail = await sendEmail({ to: newAdmin.result.email, subject: 'invitation link ', html })
-      .then((response) => {
-        /* istanbul ignore if */
-        if (response.message) {
-          deleteOne(AdminModel, { id: newAdmin.result._id })
-        }
-        return response
-      })
+    if (mail.message || mail.error) {
+      await deleteOne(AdminModel, { id: newAdmin.result._id })
+    }
 
     return {
       status: 201,
