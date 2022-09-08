@@ -11,14 +11,13 @@ import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'sta
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
-import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const Invitation = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'invitation.html'), 'utf8')
 
-export default (apiServer) => {
+export default (apiServer, sendEmail) => {
   apiServer.post('/v1/invitation/send', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
@@ -37,11 +36,13 @@ export default (apiServer) => {
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const template = handlebars.compile(Invitation)
     const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
-    const mail = await sendEmail({ to: newAdmin.result.email, subject: 'invitation link ', html })
-    if (mail.message || mail.error) {
+    let mail
+    try {
+      mail = await sendEmail({ to: newAdmin.result.email, subject: 'invitation link ', html })
+    } catch (e) {
       await deleteOne(AdminModel, { id: newAdmin.result._id })
+      throw e
     }
-
     return {
       status: 201,
       result: {

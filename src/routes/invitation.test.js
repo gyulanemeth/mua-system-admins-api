@@ -5,6 +5,9 @@ import request from 'supertest'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
 
+import { jest } from '@jest/globals'
+import sendEmail from 'aws-ses-send-email'
+
 import createMongooseMemoryServer from 'mongoose-memory'
 
 import createServer from './index.js'
@@ -20,7 +23,7 @@ describe('/v1/invitation', () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
 
-    app = createServer()
+    app = createServer(sendEmail)
     app = app._expressServer
   })
 
@@ -97,6 +100,29 @@ describe('/v1/invitation', () => {
       .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
 
     expect(res.body.status).toBe(403)
+  })
+
+  test('send invitation sending error   /v1/invitation/send', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const mockSendEmail = jest.fn(() => {
+      throw new Error('test mock send email error')
+    })
+    app = createServer(mockSendEmail)
+    app = app._expressServer
+
+    const token = jwt.sign({ type: 'admin' }, secrets[0])
+
+    const res = await request(app)
+      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+
+    expect(res.body.error.message).toEqual('test mock send email error')
   })
 
   // invitation accept tests
