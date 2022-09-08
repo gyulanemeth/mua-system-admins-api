@@ -118,7 +118,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin' }, secrets[0])
+    const token = jwt.sign({ type: 'delete' }, secrets[0])
 
     const res = await request(app)
       .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -126,12 +126,65 @@ describe('/v1/admins/ ', () => {
     expect(res.body.status).toBe(200)
   })
 
+  test('delete admin permission needed error /v1/admins/:id', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    const res = await request(app)
+      .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+
+    expect(res.body.status).toBe(403)
+  })
+
+  test('success get permission ', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
+
+    const res = await request(app)
+      .post('/v1/admins/permission/delete').set('authorization', 'Bearer ' + token)
+      .send({ password: 'user1Password' })
+
+    expect(res.body.status).toBe(200)
+  })
+
+  test('get permission error wrong Password ', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
+
+    const res = await request(app)
+      .post('/v1/admins/permission/delete').set('authorization', 'Bearer ' + token)
+      .send({ password: 'wrongPassword' })
+
+    expect(res.body.status).toBe(401)
+  })
+
   test('delete last admin error /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const token = jwt.sign({ type: 'admin' }, secrets[0])
+    const token = jwt.sign({ type: 'delete' }, secrets[0])
 
     const res = await request(app)
       .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()

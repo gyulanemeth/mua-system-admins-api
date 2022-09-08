@@ -8,7 +8,7 @@ import jwt from 'jsonwebtoken'
 import handlebars from 'handlebars'
 
 import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
-import { AuthorizationError, MethodNotAllowedError, ValidationError } from 'standard-api-errors'
+import { AuthorizationError, MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
@@ -38,13 +38,33 @@ export default (apiServer) => {
   })
 
   apiServer.delete('/v1/admins/:id', async req => {
-    allowAccessTo(req, secrets, [{ type: 'admin' }])
+    allowAccessTo(req, secrets, [{ type: 'delete' }])
     const adminCount = await AdminModel.count({})
     if (adminCount === 1) {
       throw new MethodNotAllowedError('Removeing the last admin is not allowed')
     }
     const response = await deleteOne(AdminModel, { id: req.params.id })
     return response
+  })
+
+  apiServer.post('/v1/admins/permission/:permissionFor', async req => {
+    const tokenData = allowAccessTo(req, secrets, [{ type: 'admin' }])
+    const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
+    const findUser = await list(AdminModel, { email: tokenData.user.email, password: hash })
+    if (findUser.result.count === 0) {
+      throw new AuthenticationError('Invalid password')
+    }
+    const payload = {
+      type: req.params.permissionFor,
+      user: tokenData.user
+    }
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
+    return {
+      status: 200,
+      result: {
+        permissionToken: token
+      }
+    }
   })
 
   apiServer.get('/v1/admins/:id/access-token', async req => {

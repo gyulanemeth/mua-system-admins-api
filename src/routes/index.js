@@ -6,7 +6,7 @@ import invitation from './invitation.js'
 import forgotPassword from './forgotPassword.js'
 import config from './config.js'
 
-export default () => {
+export default (sendEmail) => {
   function errorHandler (e) {
     return {
       status: e.status,
@@ -21,7 +21,7 @@ export default () => {
 
   admins(apiServer)
   login(apiServer)
-  invitation(apiServer)
+  invitation(apiServer, sendEmail)
   forgotPassword(apiServer)
   config(apiServer)
 
