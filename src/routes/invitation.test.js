@@ -4,8 +4,8 @@ import mongoose from 'mongoose'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
 import nodemailer from 'nodemailer'
+import { vi } from 'vitest'
 
-import { jest } from '@jest/globals'
 import sendEmail from 'aws-ses-send-email'
 
 import createMongooseMemoryServer from 'mongoose-memory'
@@ -111,7 +111,7 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const mockSendEmail = jest.fn(() => {
+    const mockSendEmail = vi.fn(() => {
       throw new Error('test mock send email error')
     })
     app = createServer(mockSendEmail)
