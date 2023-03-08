@@ -47,7 +47,7 @@ export default (apiServer, sendEmail) => {
       status: 201,
       result: {
         success: true,
-        info: mail.result.info
+        info: {mail: mail.result.info, admin: newAdmin.result }
       }
     }
   })
