@@ -53,7 +53,7 @@ describe('/v1/invitation', () => {
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
 
-    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info)
+    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info.mail)
 
     const html = await fetch(messageUrl).then(response => response.text())
     const regex = /<a[\s]+id=\\"invitationLink\\"[^\n\r]*\?token&#x3D([^"&]+)">/g
