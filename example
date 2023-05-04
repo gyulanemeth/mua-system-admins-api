@@ -1,0 +1,9 @@
+NODE_ENV=development
+PORT=10001
+MONGO_URL=mongodb://0.0.0.0:27017/mua-system-admins
+SECRETS=verylongsecret1 verylongsecret2
+
+APP_URL=<admins.emailfox_app_url>
+FROM_EMAIL_ADDRESS=<your_sending_email>
+AWS_ACCESS_KEY_ID=<your_aws_access_key_id>
+AWS_SECRET_ACCESS_KEY=<your_aws_secret_access_key>
