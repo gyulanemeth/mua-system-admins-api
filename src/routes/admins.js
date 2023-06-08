@@ -22,6 +22,14 @@ const VerifyEmail = fs.readFileSync(path.join(__dirname, '..', 'email-templates'
 export default (apiServer) => {
   apiServer.get('/v1/admins/', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
+    if (req.query.filter) {
+      req.query.filter = {
+        $or: [
+          { name: req.query.filter },
+          { email: req.query.filter }
+        ]
+      }
+    }
     const response = await list(AdminModel, req.params, req.query)
     response.result.items = response.result.items.map(user => {
       user.invitationAccepted = !!user.password
@@ -41,7 +49,7 @@ export default (apiServer) => {
     allowAccessTo(req, secrets, [{ type: 'delete' }])
     const adminCount = await AdminModel.count({})
     if (adminCount === 1) {
-      throw new MethodNotAllowedError('Removeing the last admin is not allowed')
+      throw new MethodNotAllowedError('Removing the last admin is not allowed')
     }
     const response = await deleteOne(AdminModel, { id: req.params.id })
     return response
