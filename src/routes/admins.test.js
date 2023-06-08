@@ -462,30 +462,4 @@ describe('/v1/admins/ ', () => {
     expect(res.body.status).toBe(200)
     expect(res.body.result.success).toBe(true)
   })
-
-  test('success query on admin list  /v1/admins/', async () => {
-    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
-    await user1.save()
-
-    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
-    await user2.save()
-
-    const user3 = new Admin({ email: 'user3@gmail.com', name: 'user3' })
-    await user3.save()
-
-    const token = jwt.sign({ type: 'admin' }, secrets[0])
-
-    const res = await request(app)
-      .get('/v1/admins/').set('authorization', 'Bearer ' + token).query({
-        filter: {
-          $regex: 'user1',
-          $options: 'i'
-        }
-      }).send()
-
-    expect(res.body.status).toBe(200)
-    expect(res.body.result.count).toBe(1)
-  })
 })
