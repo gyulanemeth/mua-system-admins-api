@@ -500,4 +500,27 @@ describe('/v1/admins/ ', () => {
     expect(pic.status).toBe(200)
     expect(res.body.status).toBe(200)
   })
+
+  test('success delete avatar ', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    const uploadRes = await request(app).post(`/v1/admins/${user1._id}/upload-avatar`)
+      .set('authorization', 'Bearer ' + token)
+      .attach('avatar', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
+
+    await server.start()
+    const picBeforeDelete = await fetch(uploadRes.body.result.avatar)
+    expect(picBeforeDelete.status).toBe(200)
+
+    const res = await request(app).delete(`/v1/admins/${user1._id}/delete-avatar `)
+      .set('authorization', 'Bearer ' + token).send()
+
+    const pic = await fetch(uploadRes.body.result.avatar)
+    expect(pic.status).toBe(404)
+    expect(res.body.status).toBe(200)
+  })
 })
