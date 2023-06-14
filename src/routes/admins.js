@@ -162,36 +162,36 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.postBinary('/v1/admins/:id/upload-avatar', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'avatar' }, async req => {
+  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture' }, async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
 
     const uploadParams = {
       Bucket: bucketName,
       Body: req.file.buffer,
-      Key: `mua-system-admins/${req.params.id}.${mime.extension(req.file.mimetype)}`
+      Key: `${req.params.id}.${mime.extension(req.file.mimetype)}`
     }
 
     const result = await s3.upload(uploadParams).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { avatar: baseUrl + result.Key })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: baseUrl + result.Key })
     return {
       status: 200,
       result: {
         success: true,
-        avatar: baseUrl + result.Key
+        profilePicture: baseUrl + result.Key
       }
     }
   })
 
-  apiServer.delete('/v1/admins/:id/delete-avatar', async req => {
+  apiServer.delete('/v1/admins/:id/profile-picture', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     const userData = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
-    const key = userData.result.avatar.substring(userData.result.avatar.lastIndexOf('/') + 1)
+    const key = userData.result.profilePicture.substring(userData.result.profilePicture.lastIndexOf('/') + 1)
 
     await s3.deleteObject({
       Bucket: bucketName,
-      Key: `mua-system-admins/${key}`
+      Key: `${key}`
     }).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { avatar: null })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
     return {
       status: 200,
       result: {

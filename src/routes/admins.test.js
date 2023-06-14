@@ -481,45 +481,45 @@ describe('/v1/admins/ ', () => {
     expect(res.body.result.success).toBe(true)
   })
 
-  test('success upload avatar ', async () => {
+  test('success upload profilePicture ', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    const res = await request(app).post(`/v1/admins/${user1._id}/upload-avatar`)
+    const res = await request(app).post(`/v1/admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)
-      .attach('avatar', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
+      .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
 
     const adminData = await request(app)
       .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     await server.start()
-    const pic = await fetch(adminData.body.result.avatar)
+    const pic = await fetch(adminData.body.result.profilePicture)
     expect(pic.status).toBe(200)
     expect(res.body.status).toBe(200)
   })
 
-  test('success delete avatar ', async () => {
+  test('success delete profilePicture ', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    const uploadRes = await request(app).post(`/v1/admins/${user1._id}/upload-avatar`)
+    const uploadRes = await request(app).post(`/v1/admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)
-      .attach('avatar', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
+      .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
 
     await server.start()
-    const picBeforeDelete = await fetch(uploadRes.body.result.avatar)
+    const picBeforeDelete = await fetch(uploadRes.body.result.profilePicture)
     expect(picBeforeDelete.status).toBe(200)
 
-    const res = await request(app).delete(`/v1/admins/${user1._id}/delete-avatar `)
+    const res = await request(app).delete(`/v1/admins/${user1._id}/profile-picture `)
       .set('authorization', 'Bearer ' + token).send()
 
-    const pic = await fetch(uploadRes.body.result.avatar)
+    const pic = await fetch(uploadRes.body.result.profilePicture)
     expect(pic.status).toBe(404)
     expect(res.body.status).toBe(200)
   })
