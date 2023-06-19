@@ -19,6 +19,8 @@ import sendEmail from 'aws-ses-send-email'
 const secrets = process.env.SECRETS.split(' ')
 const baseUrl = process.env.STATIC_SERVER_URL
 const bucketName = process.env.AWS_BUCKET_NAME
+const folderName = process.env.AWS_FOLDER_NAME
+
 const s3 = await aws()
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -168,7 +170,7 @@ export default (apiServer) => {
     const uploadParams = {
       Bucket: bucketName,
       Body: req.file.buffer,
-      Key: `${req.params.id}.${mime.extension(req.file.mimetype)}`
+      Key: `${folderName}/${req.params.id}.${mime.extension(req.file.mimetype)}`
     }
 
     const result = await s3.upload(uploadParams).promise()
@@ -189,7 +191,7 @@ export default (apiServer) => {
 
     await s3.deleteObject({
       Bucket: bucketName,
-      Key: `${key}`
+      Key: `${folderName}/${key}`
     }).promise()
     await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
     return {
