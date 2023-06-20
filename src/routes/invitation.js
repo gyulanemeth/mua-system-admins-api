@@ -58,7 +58,7 @@ export default (apiServer, sendEmail) => {
     if (response.result.count === 0) {
       throw new AuthenticationError('Check user name')
     }
-    if (response.result.items[0].password) {
+    if (response.result.items[0].password) { // check if user accepted the invitation before and completed the necessary data.
       throw new MethodNotAllowedError('Token already used, user exists')
     }
     if (req.body.newPassword !== req.body.newPasswordAgain) { // check password matching
