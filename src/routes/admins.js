@@ -50,7 +50,7 @@ export default (apiServer) => {
     if (adminCount === 1) {
       throw new MethodNotAllowedError('Removing the last admin is not allowed')
     }
-    const response = await deleteOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
+    const response = await deleteOne(AdminModel, { id: req.params.id }, { password: 0 })
     return response
   })
 
