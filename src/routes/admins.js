@@ -40,7 +40,7 @@ export default (apiServer) => {
 
   apiServer.get('/v1/admins/:id', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
-    const response = await readOne(AdminModel, { id: req.params.id }, req.query)
+    const response = await readOne(AdminModel, { id: req.params.id }, {...req.query, select: { password: 0 } })
     return response
   })
 
@@ -50,7 +50,7 @@ export default (apiServer) => {
     if (adminCount === 1) {
       throw new MethodNotAllowedError('Removing the last admin is not allowed')
     }
-    const response = await deleteOne(AdminModel, { id: req.params.id })
+    const response = await deleteOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
     return response
   })
 
