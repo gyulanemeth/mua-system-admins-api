@@ -17,7 +17,6 @@ import aws from '../helpers/awsBucket.js'
 import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
-const baseUrl = process.env.STATIC_SERVER_URL
 const bucketName = process.env.AWS_BUCKET_NAME
 const folderName = process.env.AWS_FOLDER_NAME
 
@@ -40,7 +39,7 @@ export default (apiServer) => {
 
   apiServer.get('/v1/admins/:id', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
-    const response = await readOne(AdminModel, { id: req.params.id }, {...req.query, select: { password: 0 } })
+    const response = await readOne(AdminModel, { id: req.params.id }, { ...req.query, select: { password: 0 } })
     return response
   })
 
@@ -174,12 +173,11 @@ export default (apiServer) => {
     }
 
     const result = await s3.upload(uploadParams).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: baseUrl + result.Key })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicturePath: result.Key })
     return {
       status: 200,
       result: {
-        success: true,
-        profilePicture: baseUrl + result.Key
+        profilePicturePath: result.Key
       }
     }
   })
@@ -187,13 +185,13 @@ export default (apiServer) => {
   apiServer.delete('/v1/admins/:id/profile-picture', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     const userData = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
-    const key = userData.result.profilePicture.substring(userData.result.profilePicture.lastIndexOf('/') + 1)
+    const key = userData.result.profilePicturePath.substring(userData.result.profilePicturePath.lastIndexOf('/') + 1)
 
     await s3.deleteObject({
       Bucket: bucketName,
       Key: `${folderName}/${key}`
     }).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicturePath: null })
     return {
       status: 200,
       result: {
