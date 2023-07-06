@@ -173,11 +173,11 @@ export default (apiServer) => {
     }
 
     const result = await s3.upload(uploadParams).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicturePath: result.Key })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicturePath: process.env.CDN_BASE_URL + result.Key })
     return {
       status: 200,
       result: {
-        profilePicturePath: result.Key
+        profilePicturePath: process.env.CDN_BASE_URL + result.Key
       }
     }
   })
