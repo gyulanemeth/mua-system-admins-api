@@ -173,11 +173,11 @@ export default (apiServer) => {
     }
 
     const result = await s3.upload(uploadParams).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicturePath: process.env.CDN_BASE_URL + result.Key })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: process.env.CDN_BASE_URL + result.Key })
     return {
       status: 200,
       result: {
-        profilePicturePath: process.env.CDN_BASE_URL + result.Key
+        profilePicture: process.env.CDN_BASE_URL + result.Key
       }
     }
   })
@@ -185,13 +185,13 @@ export default (apiServer) => {
   apiServer.delete('/v1/admins/:id/profile-picture', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     const userData = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
-    const key = userData.result.profilePicturePath.substring(userData.result.profilePicturePath.lastIndexOf('/') + 1)
+    const key = userData.result.profilePicture.substring(userData.result.profilePicture.lastIndexOf('/') + 1)
 
     await s3.deleteObject({
       Bucket: bucketName,
       Key: `${folderName}/${key}`
     }).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicturePath: null })
+    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
     return {
       status: 200,
       result: {

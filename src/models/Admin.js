@@ -5,7 +5,7 @@ const AdminSchema = new mongoose.Schema({
   // email should be unique and should be in  example@example.com formate match: /.+\@.+\..+/,
   email: { type: String, lowercase: true, required: true, match: /.+[\\@].+\..+/, unique: true },
   password: { type: String },
-  profilePicturePath: { type: String }
+  profilePicture: { type: String }
 }, { timestamps: true })
 
 AdminSchema.index({ name: 'text', email: 'text' })

@@ -498,7 +498,7 @@ describe('/v1/admins/ ', () => {
       .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     await server.start()
-    const pic = await fetch(adminData.body.result.profilePicturePath)
+    const pic = await fetch(adminData.body.result.profilePicture)
     expect(pic.status).toBe(200)
     expect(res.body.status).toBe(200)
   })
@@ -516,13 +516,13 @@ describe('/v1/admins/ ', () => {
       .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
 
     await server.start()
-    const picBeforeDelete = await fetch(uploadRes.body.result.profilePicturePath)
+    const picBeforeDelete = await fetch(uploadRes.body.result.profilePicture)
     expect(picBeforeDelete.status).toBe(200)
 
     const res = await request(app).delete(`/v1/admins/${user1._id}/profile-picture `)
       .set('authorization', 'Bearer ' + token).send()
 
-    const pic = await fetch(uploadRes.body.result.profilePicturePath)
+    const pic = await fetch(uploadRes.body.result.profilePicture)
     expect(pic.status).toBe(404)
     expect(res.body.status).toBe(200)
   })
