@@ -25,7 +25,7 @@ const s3 = await aws()
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const VerifyEmail = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'verifyEmail.html'), 'utf8')
 
-export default (apiServer) => {
+export default (apiServer, maxFileSize) => {
   apiServer.get('/v1/admins/', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
@@ -163,7 +163,7 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize: 5242880 }, async req => {
+  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize }, async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
 
     const uploadParams = {

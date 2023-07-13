@@ -503,6 +503,25 @@ describe('/v1/admins/ ', () => {
     expect(res.body.status).toBe(200)
   })
 
+  test('upload profilePicture max file size error ', async () => {
+    process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
+
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    let sizeTestApp = createServer({}, 1)
+    sizeTestApp = sizeTestApp._expressServer
+
+    const res = await request(sizeTestApp).post(`/v1/admins/${user1._id}/profile-picture`)
+      .set('authorization', 'Bearer ' + token)
+      .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
+
+    expect(res.body.status).toBe(413)
+  })
+
   test('success delete profilePicture ', async () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
