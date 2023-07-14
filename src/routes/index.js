@@ -13,7 +13,7 @@ export default (sendEmail, maxFileSize) => {
         status: 413,
         error: {
           name: 'PAYLOAD_TOO_LARGE',
-          message: 'File size limit exceeded. Maximum file size allowed is ' + maxFileSize
+          message: 'File size limit exceeded. Maximum file size allowed is ' + (Number(maxFileSize) / (1024 * 1024)).toFixed(2) + 'mb'
         }
       }
     }
