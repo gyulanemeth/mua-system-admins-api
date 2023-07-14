@@ -6,8 +6,17 @@ import invitation from './invitation.js'
 import forgotPassword from './forgotPassword.js'
 import config from './config.js'
 
-export default (sendEmail) => {
+export default (sendEmail, maxFileSize) => {
   function errorHandler (e) {
+    if (e.code === 'LIMIT_FILE_SIZE') {
+      return {
+        status: 413,
+        error: {
+          name: 'PAYLOAD_TOO_LARGE',
+          message: 'File size limit exceeded. Maximum file size allowed is ' + maxFileSize
+        }
+      }
+    }
     return {
       status: e.status,
       error: {
@@ -19,7 +28,7 @@ export default (sendEmail) => {
 
   const apiServer = createApiServer(errorHandler, () => {})
 
-  admins(apiServer)
+  admins(apiServer, maxFileSize)
   login(apiServer)
   invitation(apiServer, sendEmail)
   forgotPassword(apiServer)

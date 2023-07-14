@@ -3,7 +3,7 @@ import sendEmail from 'aws-ses-send-email'
 
 import routes from './routes/index.js'
 
-const api = routes(sendEmail)
+const api = routes(sendEmail, process.env.MAX_FILE_SIZE)
 
 await mongoose.connect(process.env.MONGO_URL).catch(e => console.error(e))
 
