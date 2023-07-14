@@ -420,7 +420,7 @@ describe('/v1/admins/ ', () => {
     const tokenPosition = found.indexOf('token&#x3D')
     const endTagPosition = found.indexOf('\\">')
     const htmlToken = found.substring(tokenPosition + 11, endTagPosition)
-    const verifiedToken = jwt.verify(htmlToken, secrets[0])
+    const verifiedToken = jwt.verify(htmlToken, secrets[0], { algorithms: ['none'] })
 
     expect(htmlToken).toBeDefined()
     expect(verifiedToken.type).toBe('verfiy-email')
