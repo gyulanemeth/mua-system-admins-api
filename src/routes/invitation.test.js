@@ -68,6 +68,37 @@ describe('/v1/invitation', () => {
     expect(verifiedToken.user.email).toBe('user3@gmail.com')
   })
 
+  test('success resend invitation', async () => {
+    const user1 = new Admin({ email: 'user1@gmail.com' })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin' }, secrets[0])
+
+    const res = await request(app)
+      .post('/v1/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user1@gmail.com' })
+
+    expect(res.body.status).toBe(201)
+    expect(res.body.result.success).toBe(true)
+
+    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info.mail)
+
+    const html = await fetch(messageUrl).then(response => response.text())
+    const regex = /<a[\s]+id=\\"invitationLink\\"[^\n\r]*\?token&#x3D([^"&]+)">/g
+    const found = html.match(regex)[0]
+    const tokenPosition = found.indexOf('token&#x3D')
+    const endTagPosition = found.indexOf('\\">')
+    const htmlToken = found.substring(tokenPosition + 11, endTagPosition)
+    const verifiedToken = jwt.verify(htmlToken, secrets[0])
+
+    expect(htmlToken).toBeDefined()
+    expect(verifiedToken.type).toBe('invitation')
+    expect(verifiedToken.user.email).toBe('user3@gmail.com')
+  })
+
   test('send invitation error user exist  /v1/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
@@ -81,6 +112,38 @@ describe('/v1/invitation', () => {
 
     const res = await request(app)
       .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user2@gmail.com' })
+
+    expect(res.body.status).toBe(405)
+  })
+
+  test('send invitation error user not exist  /v1/invitation/send', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin' }, secrets[0])
+    const res = await request(app)
+      .post('/v1/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+
+    expect(res.body.status).toBe(405)
+  })
+
+  test('send invitation error user already verified', async () => {
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin' }, secrets[0])
+    const res = await request(app)
+      .post('/v1/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user1@gmail.com' })
 
     expect(res.body.status).toBe(405)
   })
