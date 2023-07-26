@@ -52,6 +52,35 @@ export default (apiServer, sendEmail) => {
     }
   })
 
+  apiServer.post('/v1/invitation/resend', async req => {
+    allowAccessTo(req, secrets, [{ type: 'admin' }])
+    const response = await list(AdminModel, req.body, { select: { password: 0 } })
+    if (response.result.count === 0) {
+      throw new MethodNotAllowedError("User dosen't exist")
+    }
+    if (response.result.items[0].name) {
+      throw new MethodNotAllowedError('User already verified')
+    }
+    const payload = {
+      type: 'invitation',
+      user: {
+        _id: response.result.items[0]._id,
+        email: response.result.items[0].email
+      }
+    }
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
+    const template = handlebars.compile(Invitation)
+    const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
+    const mail = await sendEmail({ to: response.result.items[0].email, subject: 'invitation link ', html })
+    return {
+      status: 201,
+      result: {
+        success: true,
+        info: { mail: mail.result.info, admin: response.result.items[0] }
+      }
+    }
+  })
+
   apiServer.post('/v1/invitation/accept', async req => {
     const data = allowAccessTo(req, secrets, [{ type: 'invitation' }])
     const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
