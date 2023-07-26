@@ -96,7 +96,7 @@ describe('/v1/invitation', () => {
 
     expect(htmlToken).toBeDefined()
     expect(verifiedToken.type).toBe('invitation')
-    expect(verifiedToken.user.email).toBe('user3@gmail.com')
+    expect(verifiedToken.user.email).toBe('user1@gmail.com')
   })
 
   test('send invitation error user exist  /v1/invitation/send', async () => {
