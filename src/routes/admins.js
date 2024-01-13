@@ -1,11 +1,6 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
-
 import crypto from 'crypto'
 
 import jwt from 'jsonwebtoken'
-import handlebars from 'handlebars'
 import mime from 'mime-types'
 
 import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
@@ -14,7 +9,6 @@ import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
 import aws from '../helpers/awsBucket.js'
-import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
 const bucketName = process.env.AWS_BUCKET_NAME
@@ -22,10 +16,22 @@ const folderName = process.env.AWS_FOLDER_NAME
 
 const s3 = await aws()
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const VerifyEmail = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'verifyEmail.html'), 'utf8')
-
 export default (apiServer, maxFileSize) => {
+  const sendVerifyEmail = async (email, token) => {
+    const url = 'https://api.staging.bluefox.email/v1/accounts/64ca178285926a72bcaba430/projects/65a20f44d75cd7fdb49bb7b9/transactional-emails/65a20fe1d75cd7fdb49bb83d/send'
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        data: { href: `${process.env.APP_URL}verify-email?token=${token}` }
+      })
+    })
+    return response.json()
+  }
+
   apiServer.get('/v1/admins/', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
@@ -139,10 +145,7 @@ export default (apiServer, maxFileSize) => {
       newEmail: req.body.newEmail
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    const template = handlebars.compile(VerifyEmail)
-    const html = template({ href: `${process.env.APP_URL}verify-email?token=${token}` })
-    const mail = await sendEmail({ to: req.body.newEmail, subject: 'verify email link ', html })
-
+    const mail = await sendVerifyEmail(req.body.newEmail, token)
     return {
       status: 200,
       result: {

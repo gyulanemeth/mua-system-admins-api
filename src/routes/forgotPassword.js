@@ -1,24 +1,30 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import crypto from 'crypto'
-
 import jwt from 'jsonwebtoken'
-import handlebars from 'handlebars'
 
 import { list, patchOne } from 'mongoose-crudl'
 import { AuthenticationError, ValidationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
 import AdminModel from '../models/Admin.js'
-import sendEmail from 'aws-ses-send-email'
 
 const secrets = process.env.SECRETS.split(' ')
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const forgetPassword = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'forgot-password.html'), 'utf8')
-
 export default (apiServer) => {
+  const sendForgotPassword = async (email, token) => {
+    const url = 'https://api.staging.bluefox.email/v1/accounts/64ca178285926a72bcaba430/projects/65a20f44d75cd7fdb49bb7b9/transactional-emails/65a20fc4d75cd7fdb49bb832/send'
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        data: { href: `${process.env.APP_URL}forgot-password/reset?token=${token}` }
+      })
+    })
+    return response.json()
+  }
+
   apiServer.post('/v1/forgot-password/send', async req => {
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
@@ -32,9 +38,7 @@ export default (apiServer) => {
       }
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    const template = handlebars.compile(forgetPassword)
-    const html = template({ href: `${process.env.APP_URL}forgot-password/reset?token=${token}` })
-    const mail = await sendEmail({ to: response.result.items[0].email, subject: 'forget password link', html })
+    const mail = await sendForgotPassword(response.result.items[0].email, token)
     return {
       status: 200,
       result: {

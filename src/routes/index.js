@@ -6,7 +6,7 @@ import invitation from './invitation.js'
 import forgotPassword from './forgotPassword.js'
 import config from './config.js'
 
-export default (sendEmail, maxFileSize) => {
+export default (maxFileSize) => {
   function errorHandler (e) {
     if (e.code === 'LIMIT_FILE_SIZE') {
       return {
@@ -30,7 +30,7 @@ export default (sendEmail, maxFileSize) => {
 
   admins(apiServer, maxFileSize)
   login(apiServer)
-  invitation(apiServer, sendEmail)
+  invitation(apiServer)
   forgotPassword(apiServer)
   config(apiServer)
 

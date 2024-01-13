@@ -1,10 +1,5 @@
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath } from 'url'
 import crypto from 'crypto'
-
 import jwt from 'jsonwebtoken'
-import handlebars from 'handlebars'
 
 import { createOne, patchOne, list, deleteOne } from 'mongoose-crudl'
 import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
@@ -14,10 +9,22 @@ import AdminModel from '../models/Admin.js'
 
 const secrets = process.env.SECRETS.split(' ')
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const Invitation = fs.readFileSync(path.join(__dirname, '..', 'email-templates', 'invitation.html'), 'utf8')
+export default (apiServer) => {
+  const sendInvitation = async (email, token) => {
+    const url = 'https://api.staging.bluefox.email/v1/accounts/64ca178285926a72bcaba430/projects/65a20f44d75cd7fdb49bb7b9/transactional-emails/65a20f97d75cd7fdb49bb825/send'
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email,
+        data: { href: `${process.env.APP_URL}invitation/accept?token=${token}` }
+      })
+    })
+    return response.json()
+  }
 
-export default (apiServer, sendEmail) => {
   apiServer.post('/v1/invitation/send', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
@@ -34,11 +41,9 @@ export default (apiServer, sendEmail) => {
       }
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    const template = handlebars.compile(Invitation)
-    const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
     let mail
     try {
-      mail = await sendEmail({ to: newAdmin.result.email, subject: 'invitation link ', html })
+      mail = await sendInvitation(newAdmin.result.email, token)
     } catch (e) {
       await deleteOne(AdminModel, { id: newAdmin.result._id })
       throw e
@@ -69,9 +74,7 @@ export default (apiServer, sendEmail) => {
       }
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    const template = handlebars.compile(Invitation)
-    const html = template({ href: `${process.env.APP_URL}invitation/accept?token=${token}` })
-    const mail = await sendEmail({ to: response.result.items[0].email, subject: 'invitation link ', html })
+    const mail = await sendInvitation(response.result.items[0].email, token)
     return {
       status: 201,
       result: {
