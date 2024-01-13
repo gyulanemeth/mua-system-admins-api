@@ -13,12 +13,13 @@ import aws from '../helpers/awsBucket.js'
 const secrets = process.env.SECRETS.split(' ')
 const bucketName = process.env.AWS_BUCKET_NAME
 const folderName = process.env.AWS_FOLDER_NAME
+const verifyEmailTemplate = process.env.BLUEFOX_VERIFY_EMAIL_TEMPLATE
 
 const s3 = await aws()
 
 export default (apiServer, maxFileSize) => {
   const sendVerifyEmail = async (email, token) => {
-    const url = 'https://api.staging.bluefox.email/v1/accounts/64ca178285926a72bcaba430/projects/65a20f44d75cd7fdb49bb7b9/transactional-emails/65a20fe1d75cd7fdb49bb83d/send'
+    const url = verifyEmailTemplate
     const response = await fetch(url, {
       method: 'POST',
       headers: {
