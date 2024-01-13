@@ -22,7 +22,11 @@ export default (apiServer) => {
         data: { href: `${process.env.APP_URL}forgot-password/reset?token=${token}` }
       })
     })
-    return response.json()
+    const res = await response.json()
+    if (res.status !== 200) {
+      throw res
+    }
+    return res
   }
 
   apiServer.post('/v1/forgot-password/send', async req => {

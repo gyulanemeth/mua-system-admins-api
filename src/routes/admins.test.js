@@ -400,7 +400,7 @@ describe('/v1/admins/ ', () => {
     fetchSpy.mockResolvedValue({
       ok: true,
       headers: { get: () => 'application/json' },
-      json: () => Promise.resolve({ result: { result: { success: true } } })
+      json: () => Promise.resolve({ result: { success: true }, status: 200 })
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
@@ -418,6 +418,31 @@ describe('/v1/admins/ ', () => {
 
     expect(res.body.status).toBe(200)
     expect(res.body.result.success).toBe(true)
+    await fetchSpy.mockRestore()
+  })
+
+  test('error fetch', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve({ status: 400 })
+    })
+
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
+
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+
+    const res = await request(app)
+      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
+
+    expect(res.body.status).toBe(400)
     await fetchSpy.mockRestore()
   })
 

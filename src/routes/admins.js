@@ -29,7 +29,11 @@ export default (apiServer, maxFileSize) => {
         data: { href: `${process.env.APP_URL}verify-email?token=${token}` }
       })
     })
-    return response.json()
+    const res = await response.json()
+    if (res.status !== 200) {
+      throw res
+    }
+    return res
   }
 
   apiServer.get('/v1/admins/', async req => {
