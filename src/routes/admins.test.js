@@ -418,6 +418,7 @@ describe('/v1/admins/ ', () => {
 
     expect(res.body.status).toBe(200)
     expect(res.body.result.success).toBe(true)
+    await fetchSpy.mockRestore()
   })
 
   test('patch email req send error email exist /v1/admins/:id/email', async () => {
@@ -505,7 +506,7 @@ describe('/v1/admins/ ', () => {
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    let sizeTestApp = createServer({}, 20000)
+    let sizeTestApp = createServer(20000)
     sizeTestApp = sizeTestApp._expressServer
 
     const res = await request(sizeTestApp).post(`/v1/admins/${user1._id}/profile-picture`)

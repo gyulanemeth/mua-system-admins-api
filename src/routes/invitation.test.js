@@ -56,6 +56,7 @@ describe('/v1/invitation', () => {
 
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
+    await fetchSpy.mockRestore()
   })
 
   test('success resend invitation', async () => {
@@ -80,6 +81,7 @@ describe('/v1/invitation', () => {
 
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
+    await fetchSpy.mockRestore()
   })
 
   test('send invitation error user exist  /v1/invitation/send', async () => {
@@ -149,6 +151,9 @@ describe('/v1/invitation', () => {
   })
 
   test('send invitation sending error   /v1/invitation/send', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockRejectedValue(new Error('test mock send email error'))
+
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -157,10 +162,7 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const mockSendEmail = vi.fn(() => {
-      throw new Error('test mock send email error')
-    })
-    app = createServer(mockSendEmail)
+    app = createServer()
     app = app._expressServer
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
