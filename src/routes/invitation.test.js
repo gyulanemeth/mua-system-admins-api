@@ -64,7 +64,7 @@ describe('/v1/invitation', () => {
     fetchSpy.mockResolvedValue({
       ok: true,
       headers: { get: () => 'application/json' },
-      json: () => Promise.resolve({ status: 400 })
+      json: () => Promise.resolve({ status: 400, error: { message: 'test error', name: 'error' } })
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
