@@ -3,10 +3,7 @@ import crypto from 'crypto'
 import mongoose from 'mongoose'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
-import nodemailer from 'nodemailer'
 import { vi } from 'vitest'
-
-import sendEmail from 'aws-ses-send-email'
 
 import createMongooseMemoryServer from 'mongoose-memory'
 
@@ -23,7 +20,7 @@ describe('/v1/invitation', () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
 
-    app = createServer(sendEmail)
+    app = createServer()
     app = app._expressServer
   })
 
@@ -37,6 +34,13 @@ describe('/v1/invitation', () => {
   })
 
   test('success send invitation  /v1/invitation/send', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve({ result: { success: true }, status: 200 })
+    })
+
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -52,23 +56,42 @@ describe('/v1/invitation', () => {
 
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
+    await fetchSpy.mockRestore()
+  })
 
-    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info.mail)
+  test('error fetch', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve({ status: 400, error: { message: 'test error', name: 'error' } })
+    })
 
-    const html = await fetch(messageUrl).then(response => response.text())
-    const regex = /<a[\s]+id=\\"invitationLink\\"[^\n\r]*\?token&#x3D([^"&]+)">/g
-    const found = html.match(regex)[0]
-    const tokenPosition = found.indexOf('token&#x3D')
-    const endTagPosition = found.indexOf('\\">')
-    const htmlToken = found.substring(tokenPosition + 11, endTagPosition)
-    const verifiedToken = jwt.verify(htmlToken, secrets[0])
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
 
-    expect(htmlToken).toBeDefined()
-    expect(verifiedToken.type).toBe('invitation')
-    expect(verifiedToken.user.email).toBe('user3@gmail.com')
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const token = jwt.sign({ type: 'admin' }, secrets[0])
+
+    const res = await request(app)
+      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+
+    expect(res.body.status).toBe(400)
+    await fetchSpy.mockRestore()
   })
 
   test('success resend invitation', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve({ result: { success: true }, status: 200 })
+    })
+
     const user1 = new Admin({ email: 'user1@gmail.com' })
     await user1.save()
 
@@ -83,20 +106,7 @@ describe('/v1/invitation', () => {
 
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
-
-    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info.mail)
-
-    const html = await fetch(messageUrl).then(response => response.text())
-    const regex = /<a[\s]+id=\\"invitationLink\\"[^\n\r]*\?token&#x3D([^"&]+)">/g
-    const found = html.match(regex)[0]
-    const tokenPosition = found.indexOf('token&#x3D')
-    const endTagPosition = found.indexOf('\\">')
-    const htmlToken = found.substring(tokenPosition + 11, endTagPosition)
-    const verifiedToken = jwt.verify(htmlToken, secrets[0])
-
-    expect(htmlToken).toBeDefined()
-    expect(verifiedToken.type).toBe('invitation')
-    expect(verifiedToken.user.email).toBe('user1@gmail.com')
+    await fetchSpy.mockRestore()
   })
 
   test('send invitation error user exist  /v1/invitation/send', async () => {
@@ -166,6 +176,9 @@ describe('/v1/invitation', () => {
   })
 
   test('send invitation sending error   /v1/invitation/send', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockRejectedValue(new Error('test mock send email error'))
+
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -174,10 +187,7 @@ describe('/v1/invitation', () => {
     const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const mockSendEmail = vi.fn(() => {
-      throw new Error('test mock send email error')
-    })
-    app = createServer(mockSendEmail)
+    app = createServer()
     app = app._expressServer
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])

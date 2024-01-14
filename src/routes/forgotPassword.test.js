@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import mongoose from 'mongoose'
 import request from 'supertest'
 import jwt from 'jsonwebtoken'
-import nodemailer from 'nodemailer'
+import { vi } from 'vitest'
 
 import createMongooseMemoryServer from 'mongoose-memory'
 
@@ -34,6 +34,13 @@ describe('/v1/forgot-password/', () => {
   })
   // forget password  send tests
   test('success send forget password  /v1/forgot-password/send', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve({ result: { success: true }, status: 200 })
+    })
+
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -48,21 +55,29 @@ describe('/v1/forgot-password/', () => {
 
     expect(res.body.status).toBe(200)
     expect(res.body.result.success).toBe(true)
+  })
 
-    // testing email sent
+  test('error fetch', async () => {
+    const fetchSpy = vi.spyOn(global, 'fetch')
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      headers: { get: () => 'application/json' },
+      json: () => Promise.resolve({ status: 400 })
+    })
 
-    const messageUrl = nodemailer.getTestMessageUrl(res.body.result.info)
+    const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
+    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    await user1.save()
 
-    const html = await fetch(messageUrl).then(response => response.text())
-    const regex = /<a[\s]+id=\\"forgetPasswordLink\\"[^\n\r]*\?token&#x3D([^"&]+)">/g
-    const found = html.match(regex)[0]
-    const tokenPosition = found.indexOf('token&#x3D')
-    const endTagPosition = found.indexOf('\\">')
-    const htmlToken = found.substring(tokenPosition + 11, endTagPosition)
-    const verifiedToken = jwt.verify(htmlToken, secrets[0])
-    expect(htmlToken).toBeDefined()
-    expect(verifiedToken.type).toBe('forgot-password')
-    expect(verifiedToken.user.email).toBe(user2.email)
+    const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
+    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    await user2.save()
+
+    const res = await request(app)
+      .post('/v1/forgot-password/send')
+      .send({ email: user2.email })
+
+    expect(res.body.status).toBe(400)
   })
 
   test('send forget password error user not found  /v1/forgot-password/send', async () => {
