@@ -5,6 +5,7 @@ import login from './login.js'
 import invitation from './invitation.js'
 import forgotPassword from './forgotPassword.js'
 import config from './config.js'
+import ping from './ping.js'
 
 export default (maxFileSize) => {
   function errorHandler (e) {
@@ -33,6 +34,7 @@ export default (maxFileSize) => {
   invitation(apiServer)
   forgotPassword(apiServer)
   config(apiServer)
+  ping(apiServer)
 
   return apiServer
 }
