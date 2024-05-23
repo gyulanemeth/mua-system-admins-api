@@ -24,7 +24,7 @@ export default ({
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: 'Bearer ' + process.env.BLUEFOX_API_KEY
+        Authorization: 'Bearer ' + process.env.ADMIN_BLUEFOX_API_KEY
       },
       body: JSON.stringify({
         email,
