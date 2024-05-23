@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
+import createApiServer from 'express-async-api'
 import crypto from 'crypto'
 
 import mongoose from 'mongoose'
@@ -7,12 +8,18 @@ import jwt from 'jsonwebtoken'
 
 import createMongooseMemoryServer from 'mongoose-memory'
 
-import createServer from './index.js'
-import Admin from '../models/Admin.js'
+import invitation from './invitation.js'
 
 const mongooseMemoryServer = createMongooseMemoryServer(mongoose)
 
 const secrets = process.env.SECRETS.split(' ')
+
+const TestModel = mongoose.model('Test', new mongoose.Schema({
+  name: { type: String },
+  email: { type: String, lowercase: true, required: true, match: /.+[\\@].+\..+/, unique: true },
+  password: { type: String },
+  profilePicture: { type: String }
+}, { timestamps: true }))
 
 describe('/v1/invitation', () => {
   let app
@@ -20,7 +27,16 @@ describe('/v1/invitation', () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
 
-    app = createServer()
+    app = createApiServer((e) => {
+      return {
+        status: e.status,
+        error: {
+          name: e.name,
+          message: e.message
+        }
+      }
+    }, () => {})
+    invitation({ apiServer: app, AdminModel: TestModel })
     app = app._expressServer
   })
 
@@ -42,11 +58,11 @@ describe('/v1/invitation', () => {
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -68,11 +84,11 @@ describe('/v1/invitation', () => {
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -92,11 +108,11 @@ describe('/v1/invitation', () => {
       json: () => Promise.resolve({ result: { success: true }, status: 200 })
     })
 
-    const user1 = new Admin({ email: 'user1@gmail.com' })
+    const user1 = new TestModel({ email: 'user1@gmail.com' })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -111,11 +127,11 @@ describe('/v1/invitation', () => {
 
   test('send invitation error user exist  /v1/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -128,11 +144,11 @@ describe('/v1/invitation', () => {
 
   test('send invitation error user not exist  /v1/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -144,11 +160,11 @@ describe('/v1/invitation', () => {
 
   test('send invitation error user already verified', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -160,11 +176,11 @@ describe('/v1/invitation', () => {
 
   test('send invitation error unAuthorized header  /v1/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
@@ -180,14 +196,23 @@ describe('/v1/invitation', () => {
     fetchSpy.mockRejectedValue(new Error('test mock send email error'))
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    app = createServer()
+    app = createApiServer((e) => {
+      return {
+        status: e.status,
+        error: {
+          name: e.name,
+          message: e.message
+        }
+      }
+    }, () => {})
+    invitation({ apiServer: app, AdminModel: TestModel })
     app = app._expressServer
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -202,10 +227,10 @@ describe('/v1/invitation', () => {
 
   test('success accept invitation  /v1/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const user2 = new Admin({ email: 'user2@gmail.com' })
+    const user2 = new TestModel({ email: 'user2@gmail.com' })
     await user2.save()
 
     const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, secrets[0])
@@ -219,11 +244,11 @@ describe('/v1/invitation', () => {
 
   test('send invitation error user exist  /v1/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, secrets[0])
@@ -238,11 +263,11 @@ describe('/v1/invitation', () => {
 
   test('send invitation error unAuthorized header  /v1/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, secrets[0])
@@ -256,10 +281,10 @@ describe('/v1/invitation', () => {
 
   test('success accept invitation  /v1/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const user2 = new Admin({ email: 'user2@gmail.com' })
+    const user2 = new TestModel({ email: 'user2@gmail.com' })
     await user2.save()
 
     const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, secrets[0])
@@ -273,10 +298,10 @@ describe('/v1/invitation', () => {
 
   test('accept invitation user email does not exist /v1/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const user2 = new Admin({ email: 'user2@gmail.com' })
+    const user2 = new TestModel({ email: 'user2@gmail.com' })
     await user2.save()
 
     const token = jwt.sign({ type: 'invitation', user: { _id: user1._id, email: 'user4@gmail.com' } }, secrets[0])

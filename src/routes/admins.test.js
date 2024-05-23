@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
-
+import createApiServer from 'express-async-api'
 import crypto from 'crypto'
 
 import mongoose from 'mongoose'
@@ -8,8 +8,7 @@ import jwt from 'jsonwebtoken'
 
 import createMongooseMemoryServer from 'mongoose-memory'
 
-import createServer from './index.js'
-import Admin from '../models/Admin.js'
+import admins from './admins.js'
 import aws from '../helpers/awsBucket.js'
 import StaticServer from 'static-server'
 
@@ -30,13 +29,37 @@ const server = new StaticServer({
   name: process.env.TEST_STATIC_SERVER_URL
 })
 
+const TestModel = mongoose.model('Test', new mongoose.Schema({
+  name: { type: String },
+  email: { type: String, lowercase: true, required: true, match: /.+[\\@].+\..+/, unique: true },
+  password: { type: String },
+  profilePicture: { type: String }
+}, { timestamps: true }))
+
 describe('/v1/admins/ ', () => {
   let app
   beforeAll(async () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
-
-    app = createServer()
+    app = createApiServer((e) => {
+      if (e.code === 'LIMIT_FILE_SIZE') {
+        return {
+          status: 413,
+          error: {
+            name: 'PAYLOAD_TOO_LARGE',
+            message: 'File size limit exceeded. Maximum file size allowed is ' + (Number(20000) / (1024 * 1024)).toFixed(2) + 'mb'
+          }
+        }
+      }
+      return {
+        status: e.status,
+        error: {
+          name: e.name,
+          message: e.message
+        }
+      }
+    }, () => {})
+    admins({ apiServer: app, AdminModel: TestModel })
     app = app._expressServer
   })
 
@@ -55,14 +78,14 @@ describe('/v1/admins/ ', () => {
   // get admin list tests
   test('success get admin list  /v1/admins/', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const user3 = new Admin({ email: 'user3@gmail.com', name: 'user3' })
+    const user3 = new TestModel({ email: 'user3@gmail.com', name: 'user3' })
     await user3.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -76,11 +99,11 @@ describe('/v1/admins/ ', () => {
 
   test('unAuthorized header  /v1/admins/', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
@@ -94,11 +117,11 @@ describe('/v1/admins/ ', () => {
   // get spicific admin tests
   test('success get admin  /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
@@ -112,11 +135,11 @@ describe('/v1/admins/ ', () => {
 
   test('unAuthorized header /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
@@ -130,11 +153,11 @@ describe('/v1/admins/ ', () => {
   // delete admin tests
   test('success delete admin /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'delete' }, secrets[0])
@@ -147,11 +170,11 @@ describe('/v1/admins/ ', () => {
 
   test('delete admin permission needed error /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -164,11 +187,11 @@ describe('/v1/admins/ ', () => {
 
   test('success get permission ', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
@@ -182,11 +205,11 @@ describe('/v1/admins/ ', () => {
 
   test('get permission error wrong Password ', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
@@ -200,7 +223,7 @@ describe('/v1/admins/ ', () => {
 
   test('delete last admin error /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'delete' }, secrets[0])
@@ -213,11 +236,11 @@ describe('/v1/admins/ ', () => {
 
   test('unAuthorized header for delete /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
@@ -231,11 +254,11 @@ describe('/v1/admins/ ', () => {
   // access Token tests
   test('success get access-token /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'login', user: { _id: user1._id } }, secrets[0])
@@ -248,11 +271,11 @@ describe('/v1/admins/ ', () => {
 
   test('success refresh access-token /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -265,11 +288,11 @@ describe('/v1/admins/ ', () => {
 
   test('access-token unAuthorized header /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
@@ -282,11 +305,11 @@ describe('/v1/admins/ ', () => {
 
   test('access-token unAuthorized user /v1/admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
@@ -300,11 +323,11 @@ describe('/v1/admins/ ', () => {
   // update admin tests
   test('update name /v1/admins/:id/name', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -320,11 +343,11 @@ describe('/v1/admins/ ', () => {
 
   test('update password success /v1/admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -340,11 +363,11 @@ describe('/v1/admins/ ', () => {
 
   test('update password unAuthorized user  /v1/admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
@@ -359,11 +382,11 @@ describe('/v1/admins/ ', () => {
 
   test('update password wrong newPasswordAgain validation error  /v1/admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -378,11 +401,11 @@ describe('/v1/admins/ ', () => {
 
   test('update password wrong password authorization error  /v1/admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -405,11 +428,11 @@ describe('/v1/admins/ ', () => {
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -431,11 +454,11 @@ describe('/v1/admins/ ', () => {
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -449,11 +472,11 @@ describe('/v1/admins/ ', () => {
 
   test('patch email req send error email exist /v1/admins/:id/email', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -466,11 +489,11 @@ describe('/v1/admins/ ', () => {
 
   test('patch email req send error email don\'t match /v1/admins/:id/email', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -483,11 +506,11 @@ describe('/v1/admins/ ', () => {
 
   test('update email success /v1/admins/:id/email-confirm', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'verfiy-email', user: { _id: user1._id }, newEmail: 'userUpdate@gmail.com' }, secrets[0])
@@ -505,7 +528,7 @@ describe('/v1/admins/ ', () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
@@ -525,14 +548,32 @@ describe('/v1/admins/ ', () => {
 
   test('upload profilePicture max file size error ', async () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
-
+    process.env.MAX_FILE_SIZE = 20000
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    let sizeTestApp = createServer(20000)
+    let sizeTestApp = createApiServer((e) => {
+      if (e.code === 'LIMIT_FILE_SIZE') {
+        return {
+          status: 413,
+          error: {
+            name: 'PAYLOAD_TOO_LARGE',
+            message: 'File size limit exceeded. Maximum file size allowed is ' + (Number(20000) / (1024 * 1024)).toFixed(2) + 'mb'
+          }
+        }
+      }
+      return {
+        status: e.status,
+        error: {
+          name: e.name,
+          message: e.message
+        }
+      }
+    }, () => {})
+    admins({ apiServer: sizeTestApp, AdminModel: TestModel })
     sizeTestApp = sizeTestApp._expressServer
 
     const res = await request(sizeTestApp).post(`/v1/admins/${user1._id}/profile-picture`)
@@ -546,7 +587,7 @@ describe('/v1/admins/ ', () => {
   test('success delete profilePicture ', async () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])

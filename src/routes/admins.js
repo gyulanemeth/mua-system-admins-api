@@ -13,7 +13,6 @@ const secrets = process.env.SECRETS.split(' ')
 const bucketName = process.env.AWS_BUCKET_NAME
 const folderName = process.env.AWS_FOLDER_NAME
 const verifyEmailTemplate = process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE
-const maxFileSize = process.env.MAX_FILE_SIZE
 
 const s3 = await aws()
 
@@ -224,7 +223,7 @@ export default ({
     }
   })
 
-  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize }, async req => {
+  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize: process.env.MAX_FILE_SIZE }, async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
 
     const uploadParams = {
