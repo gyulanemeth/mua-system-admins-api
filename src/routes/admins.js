@@ -197,8 +197,8 @@ export default ({
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const mail = await sendVerifyEmail(req.body.newEmail, token)
     let postRes
-    if (hooks.updatePassword?.post) {
-      postRes = await hooks.updatePassword.post(req.params, req.body, mail)
+    if (hooks.updateEmail?.post) {
+      postRes = await hooks.updateEmail.post(req.params, req.body, mail)
     }
     return postRes || {
       status: 200,
@@ -211,8 +211,12 @@ export default ({
 
   apiServer.patch('/v1/admins/:id/email-confirm', async req => {
     const data = await allowAccessTo(req, secrets, [{ type: 'verfiy-email', user: { _id: req.params.id } }])
-    await patchOne(AdminModel, { id: req.params.id }, { email: data.newEmail })
-    return {
+    const response = await patchOne(AdminModel, { id: req.params.id }, { email: data.newEmail })
+    let postRes
+    if (hooks.confirmEmail?.post) {
+      postRes = await hooks.confirmEmail.post(req.params, req.body, response.result)
+    }
+    return postRes || {
       status: 200,
       result: {
         success: true
