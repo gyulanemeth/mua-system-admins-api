@@ -7,17 +7,33 @@ import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
 import { AuthorizationError, MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
-import AdminModel from '../models/Admin.js'
 import aws from '../helpers/awsBucket.js'
 
 const secrets = process.env.SECRETS.split(' ')
 const bucketName = process.env.AWS_BUCKET_NAME
 const folderName = process.env.AWS_FOLDER_NAME
-const verifyEmailTemplate = process.env.BLUEFOX_VERIFY_EMAIL_TEMPLATE
+const verifyEmailTemplate = process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE
+const maxFileSize = process.env.MAX_FILE_SIZE
 
 const s3 = await aws()
 
-export default (apiServer, maxFileSize) => {
+export default ({
+  apiServer, AdminModel,
+  hooks =
+  {
+    listAdmins: { post: (params) => { } },
+    readOneAdmin: { post: (params) => { } },
+    deleteAdmin: { post: (params) => { } },
+    permissionFor: { post: (params) => { } },
+    accessToken: { post: (params) => { } },
+    updateName: { post: (params) => { } },
+    updatePassword: { post: (params) => { } },
+    updateEmail: { post: (params) => { } },
+    confirmEmail: { post: (params) => { } },
+    addProfilePicture: { post: (params) => { } },
+    deleteProfilePicture: { post: (params) => { } }
+  }
+}) => {
   const sendVerifyEmail = async (email, token) => {
     const url = verifyEmailTemplate
     const response = await fetch(url, {
@@ -28,7 +44,7 @@ export default (apiServer, maxFileSize) => {
       },
       body: JSON.stringify({
         email,
-        data: { href: `${process.env.APP_URL}verify-email?token=${token}` }
+        data: { href: `${process.env.ADMIN_APP_URL}verify-email?token=${token}` }
       })
     })
     const res = await response.json()
@@ -46,13 +62,21 @@ export default (apiServer, maxFileSize) => {
       delete user.password
       return user
     })
-    return response
+    let postRes
+    if (hooks.listAdmins?.post) {
+      postRes = await hooks.listAdmins.post(req.params, req.body, response.result)
+    }
+    return postRes || response
   })
 
   apiServer.get('/v1/admins/:id', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await readOne(AdminModel, { id: req.params.id }, { ...req.query, select: { password: 0 } })
-    return response
+    let postRes
+    if (hooks.readOneAdmin?.post) {
+      postRes = await hooks.readOneAdmin.post(req.params, req.body, response.result)
+    }
+    return postRes || response
   })
 
   apiServer.delete('/v1/admins/:id', async req => {
@@ -62,7 +86,11 @@ export default (apiServer, maxFileSize) => {
       throw new MethodNotAllowedError('Removing the last admin is not allowed')
     }
     const response = await deleteOne(AdminModel, { id: req.params.id }, { password: 0 })
-    return response
+    let postRes
+    if (hooks.deleteAdmin?.post) {
+      postRes = await hooks.deleteAdmin.post(req.params, req.body, response.result)
+    }
+    return postRes || response
   })
 
   apiServer.post('/v1/admins/permission/:permissionFor', async req => {
@@ -77,7 +105,11 @@ export default (apiServer, maxFileSize) => {
       user: tokenData.user
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '5m' })
-    return {
+    let postRes
+    if (hooks.permissionFor?.post) {
+      postRes = await hooks.permissionFor.post(req.params, req.body, token)
+    }
+    return postRes || {
       status: 200,
       result: {
         permissionToken: token
@@ -96,7 +128,11 @@ export default (apiServer, maxFileSize) => {
       }
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    return {
+    let postRes
+    if (hooks.accessToken?.post) {
+      postRes = await hooks.accessToken.post(req.params, req.body, token)
+    }
+    return postRes || {
       status: 200,
       result: {
         accessToken: token
@@ -106,8 +142,12 @@ export default (apiServer, maxFileSize) => {
 
   apiServer.patch('/v1/admins/:id/name', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
-    await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
-    return {
+    const response = await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
+    let postRes
+    if (hooks.updateName?.post) {
+      postRes = await hooks.updateName.post(req.params, req.body, response.result)
+    }
+    return postRes || {
       status: 200,
       result: {
         success: true
@@ -126,8 +166,12 @@ export default (apiServer, maxFileSize) => {
     if (oldHash !== getAdmin.result.password) {
       throw new AuthorizationError('Wrong password.')
     }
-    await patchOne(AdminModel, { id: req.params.id }, { password: hash })
-    return {
+    const response = await patchOne(AdminModel, { id: req.params.id }, { password: hash })
+    let postRes
+    if (hooks.updatePassword?.post) {
+      postRes = await hooks.updatePassword.post(req.params, req.body, response.result)
+    }
+    return postRes || {
       status: 200,
       result: {
         success: true
@@ -152,7 +196,11 @@ export default (apiServer, maxFileSize) => {
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const mail = await sendVerifyEmail(req.body.newEmail, token)
-    return {
+    let postRes
+    if (hooks.updatePassword?.post) {
+      postRes = await hooks.updatePassword.post(req.params, req.body, mail)
+    }
+    return postRes || {
       status: 200,
       result: {
         success: true,
@@ -182,8 +230,12 @@ export default (apiServer, maxFileSize) => {
     }
 
     const result = await s3.upload(uploadParams).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: process.env.CDN_BASE_URL + result.Key })
-    return {
+    const response = await patchOne(AdminModel, { id: req.params.id }, { profilePicture: process.env.CDN_BASE_URL + result.Key })
+    let postRes
+    if (hooks.addProfilePicture?.post) {
+      postRes = await hooks.addProfilePicture.post(req.params, req.body, response.result)
+    }
+    return postRes || {
       status: 200,
       result: {
         profilePicture: process.env.CDN_BASE_URL + result.Key
@@ -200,8 +252,12 @@ export default (apiServer, maxFileSize) => {
       Bucket: bucketName,
       Key: `${folderName}/${key}`
     }).promise()
-    await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
-    return {
+    const response = await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
+    let postRes
+    if (hooks.deleteProfilePicture?.post) {
+      postRes = await hooks.deleteProfilePicture.post(req.params, req.body, response.result)
+    }
+    return postRes || {
       status: 200,
       result: {
         success: true

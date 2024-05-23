@@ -1,11 +1,13 @@
-import mongoose from 'mongoose'
+import admins from './routes/admins.js'
+import login from './routes/login.js'
+import invitation from './routes/invitation.js'
+import forgotPassword from './routes/forgotPassword.js'
+import config from './routes/config.js'
 
-import routes from './routes/index.js'
-
-const api = routes(process.env.MAX_FILE_SIZE)
-
-await mongoose.connect(process.env.MONGO_URL).catch(e => console.error(e))
-
-api.listen(process.env.PORT, () => {
-  console.log(`MUA System Admins API is listening on ${process.env.PORT}`)
-})
+export {
+  admins,
+  login,
+  invitation,
+  forgotPassword,
+  config
+}

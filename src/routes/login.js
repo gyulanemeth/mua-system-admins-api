@@ -5,11 +5,15 @@ import jwt from 'jsonwebtoken'
 import { list } from 'mongoose-crudl'
 import { AuthenticationError } from 'standard-api-errors'
 
-import AdminModel from '../models/Admin.js'
-
 const secrets = process.env.SECRETS.split(' ')
 
-export default (apiServer) => {
+export default ({
+  apiServer, AdminModel,
+  hooks =
+  {
+    login: { post: (params) => { } }
+  }
+}) => {
   apiServer.post('/v1/login', async req => {
     req.body.email = req.body.email.toLowerCase()
     req.body.password = crypto.createHash('md5').update(req.body.password).digest('hex')
@@ -27,7 +31,11 @@ export default (apiServer) => {
       }
     }
     const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    return {
+    let postRes
+    if (hooks.login?.post) {
+      postRes = await hooks.login.post(req.params, req.body, token)
+    }
+    return postRes || {
       status: 200,
       result: {
         loginToken: token
