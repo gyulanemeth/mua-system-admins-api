@@ -8,7 +8,7 @@ import { AuthenticationError } from 'standard-api-errors'
 export default ({
   apiServer, AdminModel
 }) => {
-  apiServer.post('/v1/login', async req => {
+  apiServer.post('/v1/system-admins/login', async req => {
     req.body.email = req.body.email.toLowerCase()
     req.body.password = crypto.createHash('md5').update(req.body.password).digest('hex')
     const findUser = await list(AdminModel, { email: req.body.email, password: req.body.password }, { select: { password: 0 } })

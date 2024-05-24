@@ -18,7 +18,7 @@ const TestModel = mongoose.model('Test', new mongoose.Schema({
   profilePicture: { type: String }
 }, { timestamps: true }))
 
-describe('/v1/login/ ', () => {
+describe('/v1/system-admins/login// ', () => {
   let app
   beforeAll(async () => {
     await mongooseMemoryServer.start()
@@ -71,7 +71,7 @@ describe('/v1/login/ ', () => {
     await user2.save()
 
     const res = await request(app)
-      .post('/v1/login')
+      .post('/v1/system-admins/login/')
       .send({ email: user1.email, password: 'user1Password' })
     expect(res.body.status).toBe(200)
   })
@@ -82,7 +82,7 @@ describe('/v1/login/ ', () => {
     await user1.save()
 
     const res = await request(app)
-      .post('/v1/login')
+      .post('/v1/system-admins/login/')
       .send({ email: 'user3@gmail.com', password: 'user1Password' })
 
     expect(res.statusCode).toBe(401)
@@ -98,7 +98,7 @@ describe('/v1/login/ ', () => {
     await user2.save()
 
     const res = await request(app)
-      .post('/v1/login')
+      .post('/v1/system-admins/login/')
       .send({ email: user1.email, password: 'user3Password' })
 
     expect(res.statusCode).toBe(401)

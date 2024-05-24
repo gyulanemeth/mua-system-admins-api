@@ -19,7 +19,7 @@ const TestModel = mongoose.model('Test', new mongoose.Schema({
   profilePicture: { type: String }
 }, { timestamps: true }))
 
-describe('/v1/forgot-password/', () => {
+describe('/v1/system-admins/forgot-password/', () => {
   let app
   beforeAll(async () => {
     await mongooseMemoryServer.start()
@@ -62,7 +62,7 @@ describe('/v1/forgot-password/', () => {
     await mongooseMemoryServer.stop()
   })
   // forget password  send tests
-  test('success send forget password  /v1/forgot-password/send', async () => {
+  test('success send forget password  /v1/system-admins/forgot-password/send', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch')
     fetchSpy.mockResolvedValue({
       ok: true,
@@ -79,7 +79,7 @@ describe('/v1/forgot-password/', () => {
     await user2.save()
 
     const res = await request(app)
-      .post('/v1/forgot-password/send')
+      .post('/v1/system-admins/forgot-password/send')
       .send({ email: user2.email })
 
     expect(res.body.status).toBe(200)
@@ -103,26 +103,26 @@ describe('/v1/forgot-password/', () => {
     await user2.save()
 
     const res = await request(app)
-      .post('/v1/forgot-password/send')
+      .post('/v1/system-admins/forgot-password/send')
       .send({ email: user2.email })
 
     expect(res.body.status).toBe(400)
   })
 
-  test('send forget password error user not found  /v1/forgot-password/send', async () => {
+  test('send forget password error user not found  /v1/system-admins/forgot-password/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const res = await request(app)
-      .post('/v1/forgot-password/send')
+      .post('/v1/system-admins/forgot-password/send')
       .send({ email: 'user2@gmail.com' })
     expect(res.body.status).toBe(401)
   })
 
   // forget password  reset tests
 
-  test('success reset forget password  /v1/forgot-password/reset', async () => {
+  test('success reset forget password  /v1/system-admins/forgot-password/reset', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -134,13 +134,13 @@ describe('/v1/forgot-password/', () => {
     const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/forgot-password/reset')
+      .post('/v1/system-admins/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(200)
   })
 
-  test(' reset forget password validation error  /v1/forgot-password/reset', async () => {
+  test(' reset forget password validation error  /v1/system-admins/forgot-password/reset', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -152,13 +152,13 @@ describe('/v1/forgot-password/', () => {
     const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/forgot-password/reset')
+      .post('/v1/system-admins/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userWrongNewPassword' })
     expect(res.body.status).toBe(400)
   })
 
-  test('reset forget password unAuthorized header  /v1/forgot-password/reset', async () => {
+  test('reset forget password unAuthorized header  /v1/system-admins/forgot-password/reset', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -170,19 +170,19 @@ describe('/v1/forgot-password/', () => {
     const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/forgot-password/reset')
+      .post('/v1/system-admins/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(403)
   })
 
-  test('reset forget password user email does not exist  /v1/forgot-password/reset', async () => {
+  test('reset forget password user email does not exist  /v1/system-admins/forgot-password/reset', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
     const token = jwt.sign({ type: 'forgot-password', user: { _id: user1._id, email: 'user4@gmail.com' } }, process.env.SECRETS.split(' ')[0])
     const res = await request(app)
-      .post('/v1/forgot-password/reset')
+      .post('/v1/system-admins/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userNewPassword', newPasswordAgain: 'userNewPassword' })
     expect(res.body.status).toBe(404)

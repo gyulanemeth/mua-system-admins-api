@@ -62,7 +62,7 @@ describe('/v1/invitation', () => {
     await mongooseMemoryServer.stop()
   })
 
-  test('success send invitation  /v1/invitation/send', async () => {
+  test('success send invitation  /v1/system-admins/invitation/send', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch')
     fetchSpy.mockResolvedValue({
       ok: true,
@@ -81,7 +81,7 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+      .post('/v1/system-admins/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
 
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
@@ -107,7 +107,7 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+      .post('/v1/system-admins/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
 
     expect(res.body.status).toBe(400)
     await fetchSpy.mockRestore()
@@ -131,14 +131,14 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user1@gmail.com' })
+      .post('/v1/system-admins/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user1@gmail.com' })
 
     expect(res.body.status).toBe(201)
     expect(res.body.result.success).toBe(true)
     await fetchSpy.mockRestore()
   })
 
-  test('send invitation error user exist  /v1/invitation/send', async () => {
+  test('send invitation error user exist  /v1/system-admins/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -150,12 +150,12 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user2@gmail.com' })
+      .post('/v1/system-admins/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user2@gmail.com' })
 
     expect(res.body.status).toBe(405)
   })
 
-  test('send invitation error user not exist  /v1/invitation/send', async () => {
+  test('send invitation error user not exist  /v1/system-admins/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -166,7 +166,7 @@ describe('/v1/invitation', () => {
 
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
     const res = await request(app)
-      .post('/v1/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+      .post('/v1/system-admins/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
 
     expect(res.body.status).toBe(405)
   })
@@ -182,12 +182,12 @@ describe('/v1/invitation', () => {
 
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
     const res = await request(app)
-      .post('/v1/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user1@gmail.com' })
+      .post('/v1/system-admins/invitation/resend').set('authorization', 'Bearer ' + token).send({ email: 'user1@gmail.com' })
 
     expect(res.body.status).toBe(405)
   })
 
-  test('send invitation error unAuthorized header  /v1/invitation/send', async () => {
+  test('send invitation error unAuthorized header  /v1/system-admins/invitation/send', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -199,12 +199,12 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'value' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+      .post('/v1/system-admins/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
 
     expect(res.body.status).toBe(403)
   })
 
-  test('send invitation sending error   /v1/invitation/send', async () => {
+  test('send invitation sending error   /v1/system-admins/invitation/send', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch')
     fetchSpy.mockRejectedValue(new Error('test mock send email error'))
 
@@ -231,14 +231,14 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
+      .post('/v1/system-admins/invitation/send').set('authorization', 'Bearer ' + token).send({ email: 'user3@gmail.com' })
 
     expect(res.body.error.message).toEqual('test mock send email error')
   })
 
   // invitation accept tests
 
-  test('success accept invitation  /v1/invitation/accept', async () => {
+  test('success accept invitation  /v1/system-admins/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -249,13 +249,13 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/accept')
+      .post('/v1/system-admins/invitation/accept')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
     expect(res.body.status).toBe(200)
   })
 
-  test('send invitation error user exist  /v1/invitation/accept', async () => {
+  test('send invitation error user exist  /v1/system-admins/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -267,14 +267,14 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/accept')
+      .post('/v1/system-admins/invitation/accept')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
 
     expect(res.body.status).toBe(405)
   })
 
-  test('send invitation error unAuthorized header  /v1/invitation/accept', async () => {
+  test('send invitation error unAuthorized header  /v1/system-admins/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -286,13 +286,13 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/accept')
+      .post('/v1/system-admins/invitation/accept')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
     expect(res.body.status).toBe(403)
   })
 
-  test('success accept invitation  /v1/invitation/accept', async () => {
+  test('success accept invitation  /v1/system-admins/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -303,13 +303,13 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'invitation', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/accept')
+      .post('/v1/system-admins/invitation/accept')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'user222PasswordUpdated' })
     expect(res.body.status).toBe(400)
   })
 
-  test('accept invitation user email does not exist /v1/invitation/accept', async () => {
+  test('accept invitation user email does not exist /v1/system-admins/invitation/accept', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
@@ -320,7 +320,7 @@ describe('/v1/invitation', () => {
     const token = jwt.sign({ type: 'invitation', user: { _id: user1._id, email: 'user4@gmail.com' } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
-      .post('/v1/invitation/accept')
+      .post('/v1/system-admins/invitation/accept')
       .set('authorization', 'Bearer ' + token)
       .send({ newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
     expect(res.body.status).toBe(401)

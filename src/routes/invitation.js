@@ -31,7 +31,7 @@ export default ({
     return res
   }
 
-  apiServer.post('/v1/invitation/send', async req => {
+  apiServer.post('/v1/system-admins/invitation/send', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count !== 0) {
@@ -63,7 +63,7 @@ export default ({
     }
   })
 
-  apiServer.post('/v1/invitation/resend', async req => {
+  apiServer.post('/v1/system-admins/invitation/resend', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
@@ -90,7 +90,7 @@ export default ({
     }
   })
 
-  apiServer.post('/v1/invitation/accept', async req => {
+  apiServer.post('/v1/system-admins/invitation/accept', async req => {
     const data = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'invitation' }])
     const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
     if (response.result.count === 0) {
