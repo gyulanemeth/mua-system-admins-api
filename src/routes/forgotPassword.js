@@ -5,19 +5,11 @@ import { list, patchOne } from 'mongoose-crudl'
 import { AuthenticationError, ValidationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
-const secrets = process.env.SECRETS.split(' ')
-const forgotPasswordTemplate = process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE
-
 export default ({
-  apiServer, AdminModel,
-  hooks =
-  {
-    forgotPasswordSend: { post: (params) => { } },
-    forgotPasswordReset: { post: (params) => { } }
-  }
+  apiServer, AdminModel
 }) => {
   const sendForgotPassword = async (email, token) => {
-    const url = forgotPasswordTemplate
+    const url = process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -48,13 +40,9 @@ export default ({
         email: response.result.items[0].email
       }
     }
-    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
     const mail = await sendForgotPassword(response.result.items[0].email, token)
-    let postRes
-    if (hooks.forgotPasswordSend?.post) {
-      postRes = await hooks.forgotPasswordSend.post(req.params, req.body, mail)
-    }
-    return postRes || {
+    return {
       status: 200,
       result: {
         success: true,
@@ -64,7 +52,7 @@ export default ({
   })
 
   apiServer.post('/v1/forgot-password/reset', async req => {
-    const data = allowAccessTo(req, secrets, [{ type: 'forgot-password' }])
+    const data = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'forgot-password' }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError("Validation error passwords didn't match ")
     }
@@ -77,12 +65,8 @@ export default ({
         email: updatedAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    let postRes
-    if (hooks.forgotPasswordReset?.post) {
-      postRes = await hooks.forgotPasswordReset.post(req.params, req.body, token)
-    }
-    return postRes || {
+    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    return {
       status: 200,
       result: {
         loginToken: token

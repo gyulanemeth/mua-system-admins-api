@@ -17,17 +17,7 @@ import { fileURLToPath } from 'url'
 
 const mongooseMemoryServer = createMongooseMemoryServer(mongoose)
 
-const bucketName = process.env.AWS_BUCKET_NAME
-const s3 = await aws()
-
-const secrets = process.env.SECRETS.split(' ')
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-
-const server = new StaticServer({
-  rootPath: './tmp/' + process.env.AWS_BUCKET_NAME, // required, the root of the server file tree
-  port: parseInt(process.env.TEST_STATIC_SERVER_URL.split(':')[2]), // required, the port to listen
-  name: process.env.TEST_STATIC_SERVER_URL
-})
 
 const TestModel = mongoose.model('Test', new mongoose.Schema({
   name: { type: String },
@@ -38,9 +28,27 @@ const TestModel = mongoose.model('Test', new mongoose.Schema({
 
 describe('/v1/admins/ ', () => {
   let app
+  let s3
+  let server
   beforeAll(async () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
+    process.env.NODE_ENV = 'development'
+    process.env.SECRETS = 'verylongsecret1 verylongsecret2'
+    process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE = ''
+    process.env.BLUEFOX_API_KEY = '<your_bluefox_api_key>'
+    process.env.MAX_FILE_SIZE = '5242880'
+    process.env.AWS_BUCKET_NAME = 'bluefox'
+    process.env.AWS_FOLDER_NAME = 'mua-system-admins'
+    process.env.AWS_BUCKET_PATH = './tmp/'
+    process.env.AWS_REGION = '<your_aws_region>'
+    process.env.AWS_ACCESS_KEY_ID = '<your_aws_access_key_id>'
+    process.env.AWS_SECRET_ACCESS_KEY = '<your_aws_secret_access_key>'
+    process.env.CDN_BASE_URL = 'http://localhost:10006/'
+    process.env.TEST_STATIC_SERVER_URL = 'http://localhost:10006/'
+    process.env.ADMIN_APP_URL = 'http://admins.emailfox.link/'
     app = createApiServer((e) => {
       if (e.code === 'LIMIT_FILE_SIZE') {
         return {
@@ -61,6 +69,13 @@ describe('/v1/admins/ ', () => {
     }, () => {})
     admins({ apiServer: app, AdminModel: TestModel })
     app = app._expressServer
+
+    s3 = await aws()
+    server = new StaticServer({
+      rootPath: './tmp/' + process.env.AWS_BUCKET_NAME, // required, the root of the server file tree
+      port: parseInt(process.env.TEST_STATIC_SERVER_URL.split(':')[2]), // required, the port to listen
+      name: process.env.TEST_STATIC_SERVER_URL
+    })
   })
 
   afterEach(async () => {
@@ -69,7 +84,7 @@ describe('/v1/admins/ ', () => {
   })
 
   afterAll(async () => {
-    await s3.deleteBucket({ Bucket: bucketName }).promise()
+    await s3.deleteBucket({ Bucket: process.env.AWS_BUCKET_NAME }).promise()
 
     await mongooseMemoryServer.disconnect()
     await mongooseMemoryServer.stop()
@@ -88,7 +103,7 @@ describe('/v1/admins/ ', () => {
     const user3 = new TestModel({ email: 'user3@gmail.com', name: 'user3' })
     await user3.save()
 
-    const token = jwt.sign({ type: 'admin' }, secrets[0])
+    const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/').set('authorization', 'Bearer ' + token).send()
@@ -106,7 +121,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value' }, secrets[0])
+    const token = jwt.sign({ type: 'value' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/').set('authorization', 'Bearer ' + token).send()
@@ -124,7 +139,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin' }, secrets[0])
+    const token = jwt.sign({ type: 'admin' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -142,7 +157,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value' }, secrets[0])
+    const token = jwt.sign({ type: 'value' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -160,7 +175,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'delete' }, secrets[0])
+    const token = jwt.sign({ type: 'delete' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -177,7 +192,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -194,7 +209,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .post('/v1/admins/permission/delete').set('authorization', 'Bearer ' + token)
@@ -212,7 +227,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .post('/v1/admins/permission/delete').set('authorization', 'Bearer ' + token)
@@ -226,7 +241,7 @@ describe('/v1/admins/ ', () => {
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const token = jwt.sign({ type: 'delete' }, secrets[0])
+    const token = jwt.sign({ type: 'delete' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -243,7 +258,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value' }, secrets[0])
+    const token = jwt.sign({ type: 'value' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
@@ -261,7 +276,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'login', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'login', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -278,7 +293,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -295,7 +310,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value' }, secrets[0])
+    const token = jwt.sign({ type: 'value' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -312,7 +327,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
@@ -330,7 +345,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/name')
@@ -350,7 +365,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')
@@ -370,7 +385,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')
@@ -389,7 +404,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')
@@ -408,7 +423,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/password')
@@ -435,7 +450,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
@@ -461,7 +476,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
@@ -479,7 +494,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'user2@gmail.com', newEmailAgain: 'user2@gmail.com' })
@@ -496,7 +511,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'updateEmail@gmail.com', newEmailAgain: 'updateEmail2@gmail.com' })
@@ -513,7 +528,7 @@ describe('/v1/admins/ ', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'verfiy-email', user: { _id: user1._id }, newEmail: 'userUpdate@gmail.com' }, secrets[0])
+    const token = jwt.sign({ type: 'verfiy-email', user: { _id: user1._id }, newEmail: 'userUpdate@gmail.com' }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .patch('/v1/admins/' + user1._id + '/email-confirm')
@@ -531,7 +546,7 @@ describe('/v1/admins/ ', () => {
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app).post(`/v1/admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)
@@ -553,7 +568,7 @@ describe('/v1/admins/ ', () => {
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     let sizeTestApp = createApiServer((e) => {
       if (e.code === 'LIMIT_FILE_SIZE') {
@@ -590,7 +605,7 @@ describe('/v1/admins/ ', () => {
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
-    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
+    const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, process.env.SECRETS.split(' ')[0])
 
     const uploadRes = await request(app).post(`/v1/admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)

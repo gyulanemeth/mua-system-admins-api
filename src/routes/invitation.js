@@ -5,21 +5,11 @@ import { createOne, patchOne, list, deleteOne } from 'mongoose-crudl'
 import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
-const secrets = process.env.SECRETS.split(' ')
-const invitationTemplate = process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE
-
 export default ({
-  apiServer, AdminModel,
-  hooks =
-  {
-    invitationSend: { post: (params) => { } },
-    invitationResend: { post: (params) => { } },
-    invitationAccept: { post: (params) => { } }
-
-  }
+  apiServer, AdminModel
 }) => {
   const sendInvitation = async (email, token) => {
-    const url = invitationTemplate
+    const url = process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -42,7 +32,7 @@ export default ({
   }
 
   apiServer.post('/v1/invitation/send', async req => {
-    allowAccessTo(req, secrets, [{ type: 'admin' }])
+    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count !== 0) {
       throw new MethodNotAllowedError('User exist')
@@ -56,7 +46,7 @@ export default ({
         email: newAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
     let mail
     try {
       mail = await sendInvitation(newAdmin.result.email, token)
@@ -64,11 +54,7 @@ export default ({
       await deleteOne(AdminModel, { id: newAdmin.result._id })
       throw e
     }
-    let postRes
-    if (hooks.invitationSend?.post) {
-      postRes = await hooks.invitationSend.post(req.params, req.body, mail)
-    }
-    return postRes || {
+    return {
       status: 201,
       result: {
         success: true,
@@ -78,7 +64,7 @@ export default ({
   })
 
   apiServer.post('/v1/invitation/resend', async req => {
-    allowAccessTo(req, secrets, [{ type: 'admin' }])
+    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
       throw new MethodNotAllowedError("User dosen't exist")
@@ -93,13 +79,9 @@ export default ({
         email: response.result.items[0].email
       }
     }
-    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
     const mail = await sendInvitation(response.result.items[0].email, token)
-    let postRes
-    if (hooks.invitationResend?.post) {
-      postRes = await hooks.invitationResend.post(req.params, req.body, mail)
-    }
-    return postRes || {
+    return {
       status: 201,
       result: {
         success: true,
@@ -109,7 +91,7 @@ export default ({
   })
 
   apiServer.post('/v1/invitation/accept', async req => {
-    const data = allowAccessTo(req, secrets, [{ type: 'invitation' }])
+    const data = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'invitation' }])
     const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
     if (response.result.count === 0) {
       throw new AuthenticationError('Check user name')
@@ -130,12 +112,8 @@ export default ({
         email: updatedAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
-    let postRes
-    if (hooks.invitationAccept?.post) {
-      postRes = await hooks.invitationAccept.post(req.params, req.body, token)
-    }
-    return postRes || {
+    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    return {
       status: 200,
       result: {
         loginToken: token

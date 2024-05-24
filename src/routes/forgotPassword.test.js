@@ -12,8 +12,6 @@ import forgotPassword from './forgotPassword.js'
 
 const mongooseMemoryServer = createMongooseMemoryServer(mongoose)
 
-const secrets = process.env.SECRETS.split(' ')
-
 const TestModel = mongoose.model('Test', new mongoose.Schema({
   name: { type: String },
   email: { type: String, lowercase: true, required: true, match: /.+[\\@].+\..+/, unique: true },
@@ -26,6 +24,22 @@ describe('/v1/forgot-password/', () => {
   beforeAll(async () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
+    process.env.NODE_ENV = 'development'
+    process.env.SECRETS = 'verylongsecret1 verylongsecret2'
+    process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE = ''
+    process.env.BLUEFOX_API_KEY = '<your_bluefox_api_key>'
+    process.env.MAX_FILE_SIZE = '5242880'
+    process.env.AWS_BUCKET_NAME = 'bluefox'
+    process.env.AWS_FOLDER_NAME = 'mua-system-admins'
+    process.env.AWS_BUCKET_PATH = './tmp/'
+    process.env.AWS_REGION = '<your_aws_region>'
+    process.env.AWS_ACCESS_KEY_ID = '<your_aws_access_key_id>'
+    process.env.AWS_SECRET_ACCESS_KEY = '<your_aws_secret_access_key>'
+    process.env.CDN_BASE_URL = 'http://localhost:10006/'
+    process.env.TEST_STATIC_SERVER_URL = 'http://localhost:10006/'
+    process.env.ADMIN_APP_URL = 'http://admins.emailfox.link/'
     app = createApiServer((e) => {
       return {
         status: e.status,
@@ -117,7 +131,7 @@ describe('/v1/forgot-password/', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .post('/v1/forgot-password/reset')
@@ -135,7 +149,7 @@ describe('/v1/forgot-password/', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .post('/v1/forgot-password/reset')
@@ -153,7 +167,7 @@ describe('/v1/forgot-password/', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, secrets[0])
+    const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
 
     const res = await request(app)
       .post('/v1/forgot-password/reset')
@@ -166,7 +180,7 @@ describe('/v1/forgot-password/', () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
-    const token = jwt.sign({ type: 'forgot-password', user: { _id: user1._id, email: 'user4@gmail.com' } }, secrets[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user1._id, email: 'user4@gmail.com' } }, process.env.SECRETS.split(' ')[0])
     const res = await request(app)
       .post('/v1/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)

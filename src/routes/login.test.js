@@ -23,6 +23,22 @@ describe('/v1/login/ ', () => {
   beforeAll(async () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
+    process.env.NODE_ENV = 'development'
+    process.env.SECRETS = 'verylongsecret1 verylongsecret2'
+    process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE = ''
+    process.env.BLUEFOX_API_KEY = '<your_bluefox_api_key>'
+    process.env.MAX_FILE_SIZE = '5242880'
+    process.env.AWS_BUCKET_NAME = 'bluefox'
+    process.env.AWS_FOLDER_NAME = 'mua-system-admins'
+    process.env.AWS_BUCKET_PATH = './tmp/'
+    process.env.AWS_REGION = '<your_aws_region>'
+    process.env.AWS_ACCESS_KEY_ID = '<your_aws_access_key_id>'
+    process.env.AWS_SECRET_ACCESS_KEY = '<your_aws_secret_access_key>'
+    process.env.CDN_BASE_URL = 'http://localhost:10006/'
+    process.env.TEST_STATIC_SERVER_URL = 'http://localhost:10006/'
+    process.env.ADMIN_APP_URL = 'http://admins.emailfox.link/'
     app = createApiServer((e) => {
       return {
         status: e.status,
