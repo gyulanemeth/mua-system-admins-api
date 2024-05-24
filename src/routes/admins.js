@@ -7,19 +7,15 @@ import { list, readOne, deleteOne, patchOne } from 'mongoose-crudl'
 import { AuthorizationError, MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
-import AdminModel from '../models/Admin.js'
 import aws from '../helpers/awsBucket.js'
 
-const secrets = process.env.SECRETS.split(' ')
-const bucketName = process.env.AWS_BUCKET_NAME
-const folderName = process.env.AWS_FOLDER_NAME
-const verifyEmailTemplate = process.env.BLUEFOX_VERIFY_EMAIL_TEMPLATE
-
-const s3 = await aws()
-
-export default (apiServer, maxFileSize) => {
+export default async ({
+  apiServer, AdminModel
+}) => {
+  const secrets = process.env.SECRETS.split(' ')
+  const s3 = await aws()
   const sendVerifyEmail = async (email, token) => {
-    const url = verifyEmailTemplate
+    const url = process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -28,7 +24,7 @@ export default (apiServer, maxFileSize) => {
       },
       body: JSON.stringify({
         email,
-        data: { href: `${process.env.APP_URL}verify-email?token=${token}` }
+        data: { href: `${process.env.ADMIN_APP_URL}verify-email?token=${token}` }
       })
     })
     const res = await response.json()
@@ -38,7 +34,7 @@ export default (apiServer, maxFileSize) => {
     return res
   }
 
-  apiServer.get('/v1/admins/', async req => {
+  apiServer.get('/v1/system-admins/', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
     response.result.items = response.result.items.map(user => {
@@ -49,13 +45,13 @@ export default (apiServer, maxFileSize) => {
     return response
   })
 
-  apiServer.get('/v1/admins/:id', async req => {
+  apiServer.get('/v1/system-admins/:id', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await readOne(AdminModel, { id: req.params.id }, { ...req.query, select: { password: 0 } })
     return response
   })
 
-  apiServer.delete('/v1/admins/:id', async req => {
+  apiServer.delete('/v1/system-admins/:id', async req => {
     allowAccessTo(req, secrets, [{ type: 'delete' }])
     const adminCount = await AdminModel.count({})
     if (adminCount === 1) {
@@ -65,7 +61,7 @@ export default (apiServer, maxFileSize) => {
     return response
   })
 
-  apiServer.post('/v1/admins/permission/:permissionFor', async req => {
+  apiServer.post('/v1/system-admins/permission/:permissionFor', async req => {
     const tokenData = allowAccessTo(req, secrets, [{ type: 'admin' }])
     const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
     const findUser = await list(AdminModel, { email: tokenData.user.email, password: hash })
@@ -85,7 +81,7 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.get('/v1/admins/:id/access-token', async req => {
+  apiServer.get('/v1/system-admins/:id/access-token', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
     const response = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
     const payload = {
@@ -104,7 +100,7 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.patch('/v1/admins/:id/name', async req => {
+  apiServer.patch('/v1/system-admins/:id/name', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
     return {
@@ -115,7 +111,7 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.patch('/v1/admins/:id/password', async req => {
+  apiServer.patch('/v1/system-admins/:id/password', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError('Validation error passwords didn\'t match.')
@@ -135,7 +131,7 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.patch('/v1/admins/:id/email', async req => {
+  apiServer.patch('/v1/system-admins/:id/email', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newEmail !== req.body.newEmailAgain) {
       throw new ValidationError('Validation error email didn\'t match.')
@@ -161,7 +157,7 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.patch('/v1/admins/:id/email-confirm', async req => {
+  apiServer.patch('/v1/system-admins/:id/email-confirm', async req => {
     const data = await allowAccessTo(req, secrets, [{ type: 'verfiy-email', user: { _id: req.params.id } }])
     await patchOne(AdminModel, { id: req.params.id }, { email: data.newEmail })
     return {
@@ -172,13 +168,13 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize }, async req => {
+  apiServer.postBinary('/v1/system-admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize: process.env.MAX_FILE_SIZE }, async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
 
     const uploadParams = {
-      Bucket: bucketName,
+      Bucket: process.env.AWS_BUCKET_NAME,
       Body: req.file.buffer,
-      Key: `${folderName}/${req.params.id}.${mime.extension(req.file.mimetype)}`
+      Key: `${process.env.AWS_FOLDER_NAME}/${req.params.id}.${mime.extension(req.file.mimetype)}`
     }
 
     const result = await s3.upload(uploadParams).promise()
@@ -191,14 +187,14 @@ export default (apiServer, maxFileSize) => {
     }
   })
 
-  apiServer.delete('/v1/admins/:id/profile-picture', async req => {
+  apiServer.delete('/v1/system-admins/:id/profile-picture', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     const userData = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
     const key = userData.result.profilePicture.substring(userData.result.profilePicture.lastIndexOf('/') + 1)
 
     await s3.deleteObject({
-      Bucket: bucketName,
-      Key: `${folderName}/${key}`
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: `${process.env.AWS_FOLDER_NAME}/${key}`
     }).promise()
     await patchOne(AdminModel, { id: req.params.id }, { profilePicture: null })
     return {

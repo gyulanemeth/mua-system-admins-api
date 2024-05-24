@@ -1,5 +1,5 @@
 import { describe, test, expect, beforeAll, afterEach, afterAll, vi } from 'vitest'
-
+import createApiServer from 'express-async-api'
 import crypto from 'crypto'
 
 import mongoose from 'mongoose'
@@ -8,8 +8,7 @@ import jwt from 'jsonwebtoken'
 
 import createMongooseMemoryServer from 'mongoose-memory'
 
-import createServer from './index.js'
-import Admin from '../models/Admin.js'
+import admins from './admins.js'
 import aws from '../helpers/awsBucket.js'
 import StaticServer from 'static-server'
 
@@ -18,26 +17,67 @@ import { fileURLToPath } from 'url'
 
 const mongooseMemoryServer = createMongooseMemoryServer(mongoose)
 
-const bucketName = process.env.AWS_BUCKET_NAME
-const s3 = await aws()
-
-const secrets = process.env.SECRETS.split(' ')
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-const server = new StaticServer({
-  rootPath: './tmp/' + process.env.AWS_BUCKET_NAME, // required, the root of the server file tree
-  port: parseInt(process.env.TEST_STATIC_SERVER_URL.split(':')[2]), // required, the port to listen
-  name: process.env.TEST_STATIC_SERVER_URL
-})
+const TestModel = mongoose.model('Test', new mongoose.Schema({
+  name: { type: String },
+  email: { type: String, lowercase: true, required: true, match: /.+[\\@].+\..+/, unique: true },
+  password: { type: String },
+  profilePicture: { type: String }
+}, { timestamps: true }))
 
-describe('/v1/admins/ ', () => {
+describe('/v1/system-admins/ ', () => {
   let app
+  let s3
+  let server
+  let secrets
   beforeAll(async () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
-
-    app = createServer()
+    process.env.NODE_ENV = 'development'
+    process.env.SECRETS = 'verylongsecret1 verylongsecret2'
+    process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE = ''
+    process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE = ''
+    process.env.BLUEFOX_API_KEY = '<your_bluefox_api_key>'
+    process.env.MAX_FILE_SIZE = '5242880'
+    process.env.AWS_BUCKET_NAME = 'bluefox'
+    process.env.AWS_FOLDER_NAME = 'mua-system-admins'
+    process.env.AWS_BUCKET_PATH = './tmp/'
+    process.env.AWS_REGION = '<your_aws_region>'
+    process.env.AWS_ACCESS_KEY_ID = '<your_aws_access_key_id>'
+    process.env.AWS_SECRET_ACCESS_KEY = '<your_aws_secret_access_key>'
+    process.env.CDN_BASE_URL = 'http://localhost:10006/'
+    process.env.TEST_STATIC_SERVER_URL = 'http://localhost:10006/'
+    process.env.ADMIN_APP_URL = 'http://admins.emailfox.link/'
+    secrets = process.env.SECRETS.split(' ')
+    app = createApiServer((e) => {
+      if (e.code === 'LIMIT_FILE_SIZE') {
+        return {
+          status: 413,
+          error: {
+            name: 'PAYLOAD_TOO_LARGE',
+            message: 'File size limit exceeded. Maximum file size allowed is ' + (Number(20000) / (1024 * 1024)).toFixed(2) + 'mb'
+          }
+        }
+      }
+      return {
+        status: e.status,
+        error: {
+          name: e.name,
+          message: e.message
+        }
+      }
+    }, () => {})
+    admins({ apiServer: app, AdminModel: TestModel })
     app = app._expressServer
+
+    s3 = await aws()
+    server = new StaticServer({
+      rootPath: './tmp/' + process.env.AWS_BUCKET_NAME, // required, the root of the server file tree
+      port: parseInt(process.env.TEST_STATIC_SERVER_URL.split(':')[2]), // required, the port to listen
+      name: process.env.TEST_STATIC_SERVER_URL
+    })
   })
 
   afterEach(async () => {
@@ -46,135 +86,135 @@ describe('/v1/admins/ ', () => {
   })
 
   afterAll(async () => {
-    await s3.deleteBucket({ Bucket: bucketName }).promise()
+    await s3.deleteBucket({ Bucket: process.env.AWS_BUCKET_NAME }).promise()
 
     await mongooseMemoryServer.disconnect()
     await mongooseMemoryServer.stop()
   })
 
   // get admin list tests
-  test('success get admin list  /v1/admins/', async () => {
+  test('success get admin list  /v1/system-admins/', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const user3 = new Admin({ email: 'user3@gmail.com', name: 'user3' })
+    const user3 = new TestModel({ email: 'user3@gmail.com', name: 'user3' })
     await user3.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/').set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/').set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(200)
     expect(res.body.result.count).toBe(3)
   })
 
-  test('unAuthorized header  /v1/admins/', async () => {
+  test('unAuthorized header  /v1/system-admins/', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/').set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/').set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(403)
   })
 
   // get spicific admin tests
-  test('success get admin  /v1/admins/:id', async () => {
+  test('success get admin  /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin' }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(200)
     expect(res.body.result.email).toBe(user1.email)
   })
 
-  test('unAuthorized header /v1/admins/:id', async () => {
+  test('unAuthorized header /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(403)
   })
 
   // delete admin tests
-  test('success delete admin /v1/admins/:id', async () => {
+  test('success delete admin /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'delete' }, secrets[0])
 
     const res = await request(app)
-      .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .delete('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(200)
   })
 
-  test('delete admin permission needed error /v1/admins/:id', async () => {
+  test('delete admin permission needed error /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .delete('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(403)
   })
 
   test('success get permission ', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
 
     const res = await request(app)
-      .post('/v1/admins/permission/delete').set('authorization', 'Bearer ' + token)
+      .post('/v1/system-admins/permission/delete').set('authorization', 'Bearer ' + token)
       .send({ password: 'user1Password' })
 
     expect(res.body.status).toBe(200)
@@ -182,135 +222,135 @@ describe('/v1/admins/ ', () => {
 
   test('get permission error wrong Password ', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { email: 'user1@gmail.com' } }, secrets[0])
 
     const res = await request(app)
-      .post('/v1/admins/permission/delete').set('authorization', 'Bearer ' + token)
+      .post('/v1/system-admins/permission/delete').set('authorization', 'Bearer ' + token)
       .send({ password: 'wrongPassword' })
 
     expect(res.body.status).toBe(401)
   })
 
-  test('delete last admin error /v1/admins/:id', async () => {
+  test('delete last admin error /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'delete' }, secrets[0])
 
     const res = await request(app)
-      .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .delete('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(405)
   })
 
-  test('unAuthorized header for delete /v1/admins/:id', async () => {
+  test('unAuthorized header for delete /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
 
     const res = await request(app)
-      .delete('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .delete('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(403)
   })
 
   // access Token tests
-  test('success get access-token /v1/admins/:id', async () => {
+  test('success get access-token /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'login', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(200)
   })
 
-  test('success refresh access-token /v1/admins/:id', async () => {
+  test('success refresh access-token /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(200)
   })
 
-  test('access-token unAuthorized header /v1/admins/:id', async () => {
+  test('access-token unAuthorized header /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'value' }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(403)
   })
 
-  test('access-token unAuthorized user /v1/admins/:id', async () => {
+  test('access-token unAuthorized user /v1/system-admins/:id', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
 
     const res = await request(app)
-      .get('/v1/admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id + '/access-token').set('authorization', 'Bearer ' + token).send()
 
     expect(res.body.status).toBe(403)
   })
 
   // update admin tests
-  test('update name /v1/admins/:id/name', async () => {
+  test('update name /v1/system-admins/:id/name', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch('/v1/admins/' + user1._id + '/name')
+      .patch('/v1/system-admins/' + user1._id + '/name')
       .set('authorization', 'Bearer ' + token)
       .send({ name: 'user3' })
 
@@ -318,19 +358,19 @@ describe('/v1/admins/ ', () => {
     expect(res.body.result.success).toBe(true)
   })
 
-  test('update password success /v1/admins/:id/password', async () => {
+  test('update password success /v1/system-admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch('/v1/admins/' + user1._id + '/password')
+      .patch('/v1/system-admins/' + user1._id + '/password')
       .set('authorization', 'Bearer ' + token)
       .send({ oldPassword: 'user1Password', newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
 
@@ -338,57 +378,57 @@ describe('/v1/admins/ ', () => {
     expect(res.body.result.success).toBe(true)
   })
 
-  test('update password unAuthorized user  /v1/admins/:id/password', async () => {
+  test('update password unAuthorized user  /v1/system-admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user2._id } }, secrets[0])
 
     const res = await request(app)
-      .patch('/v1/admins/' + user1._id + '/password')
+      .patch('/v1/system-admins/' + user1._id + '/password')
       .set('authorization', 'Bearer ' + token)
       .send({ oldPassword: 'user1Password', newPassword: 'userPasswordUpdated', newPasswordAgain: 'userPasswordUpdated' })
 
     expect(res.body.status).toBe(403)
   })
 
-  test('update password wrong newPasswordAgain validation error  /v1/admins/:id/password', async () => {
+  test('update password wrong newPasswordAgain validation error  /v1/system-admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch('/v1/admins/' + user1._id + '/password')
+      .patch('/v1/system-admins/' + user1._id + '/password')
       .set('authorization', 'Bearer ' + token)
       .send({ oldPassword: 'user1Password', newPassword: 'userPasswordUpdated', newPasswordAgain: 'user11PasswordUpdated' })
 
     expect(res.body.status).toBe(400)
   })
 
-  test('update password wrong password authorization error  /v1/admins/:id/password', async () => {
+  test('update password wrong password authorization error  /v1/system-admins/:id/password', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch('/v1/admins/' + user1._id + '/password')
+      .patch('/v1/system-admins/' + user1._id + '/password')
       .set('authorization', 'Bearer ' + token)
       .send({ oldPassword: 'user1Password_wrong', newPassword: 'user11PasswordUpdated', newPasswordAgain: 'user11PasswordUpdated' })
 
@@ -396,7 +436,7 @@ describe('/v1/admins/ ', () => {
     expect(res.body.error.message).toBe('Wrong password.')
   })
 
-  test('success patch email req send  /v1/admins/:id/email', async () => {
+  test('success patch email req send  /v1/system-admins/:id/email', async () => {
     const fetchSpy = vi.spyOn(global, 'fetch')
     fetchSpy.mockResolvedValue({
       ok: true,
@@ -405,17 +445,17 @@ describe('/v1/admins/ ', () => {
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
+      .patch(`/v1/system-admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
 
     expect(res.body.status).toBe(200)
     expect(res.body.result.success).toBe(true)
@@ -431,69 +471,69 @@ describe('/v1/admins/ ', () => {
     })
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
+      .patch(`/v1/system-admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'userUpdate@gmail.com', newEmailAgain: 'userUpdate@gmail.com' })
 
     expect(res.body.status).toBe(400)
     await fetchSpy.mockRestore()
   })
 
-  test('patch email req send error email exist /v1/admins/:id/email', async () => {
+  test('patch email req send error email exist /v1/system-admins/:id/email', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'user2@gmail.com', newEmailAgain: 'user2@gmail.com' })
+      .patch(`/v1/system-admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'user2@gmail.com', newEmailAgain: 'user2@gmail.com' })
 
     expect(res.body.status).toBe(405)
   })
 
-  test('patch email req send error email don\'t match /v1/admins/:id/email', async () => {
+  test('patch email req send error email don\'t match /v1/system-admins/:id/email', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
     const res = await request(app)
-      .patch(`/v1/admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'updateEmail@gmail.com', newEmailAgain: 'updateEmail2@gmail.com' })
+      .patch(`/v1/system-admins/${user1._id}/email`).set('authorization', 'Bearer ' + token).send({ newEmail: 'updateEmail@gmail.com', newEmailAgain: 'updateEmail2@gmail.com' })
 
     expect(res.body.status).toBe(400)
   })
 
-  test('update email success /v1/admins/:id/email-confirm', async () => {
+  test('update email success /v1/system-admins/:id/email-confirm', async () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const hash2 = crypto.createHash('md5').update('user2Password').digest('hex')
-    const user2 = new Admin({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
+    const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
     const token = jwt.sign({ type: 'verfiy-email', user: { _id: user1._id }, newEmail: 'userUpdate@gmail.com' }, secrets[0])
 
     const res = await request(app)
-      .patch('/v1/admins/' + user1._id + '/email-confirm')
+      .patch('/v1/system-admins/' + user1._id + '/email-confirm')
       .set('authorization', 'Bearer ' + token)
       .send()
 
@@ -505,17 +545,17 @@ describe('/v1/admins/ ', () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
 
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    const res = await request(app).post(`/v1/admins/${user1._id}/profile-picture`)
+    const res = await request(app).post(`/v1/system-admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)
       .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
 
     const adminData = await request(app)
-      .get('/v1/admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
+      .get('/v1/system-admins/' + user1._id).set('authorization', 'Bearer ' + token).send()
 
     await server.start()
     const pic = await fetch(adminData.body.result.profilePicture)
@@ -525,17 +565,35 @@ describe('/v1/admins/ ', () => {
 
   test('upload profilePicture max file size error ', async () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
-
+    process.env.MAX_FILE_SIZE = 20000
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    let sizeTestApp = createServer(20000)
+    let sizeTestApp = createApiServer((e) => {
+      if (e.code === 'LIMIT_FILE_SIZE') {
+        return {
+          status: 413,
+          error: {
+            name: 'PAYLOAD_TOO_LARGE',
+            message: 'File size limit exceeded. Maximum file size allowed is ' + (Number(20000) / (1024 * 1024)).toFixed(2) + 'mb'
+          }
+        }
+      }
+      return {
+        status: e.status,
+        error: {
+          name: e.name,
+          message: e.message
+        }
+      }
+    }, () => {})
+    admins({ apiServer: sizeTestApp, AdminModel: TestModel })
     sizeTestApp = sizeTestApp._expressServer
 
-    const res = await request(sizeTestApp).post(`/v1/admins/${user1._id}/profile-picture`)
+    const res = await request(sizeTestApp).post(`/v1/system-admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)
       .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
 
@@ -546,12 +604,12 @@ describe('/v1/admins/ ', () => {
   test('success delete profilePicture ', async () => {
     process.env.CDN_BASE_URL = process.env.TEST_STATIC_SERVER_URL
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
-    const user1 = new Admin({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
+    const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
 
     const token = jwt.sign({ type: 'admin', user: { _id: user1._id } }, secrets[0])
 
-    const uploadRes = await request(app).post(`/v1/admins/${user1._id}/profile-picture`)
+    const uploadRes = await request(app).post(`/v1/system-admins/${user1._id}/profile-picture`)
       .set('authorization', 'Bearer ' + token)
       .attach('profilePicture', path.join(__dirname, '..', 'helpers/testPics', 'test.png'))
 
@@ -559,7 +617,7 @@ describe('/v1/admins/ ', () => {
     const picBeforeDelete = await fetch(uploadRes.body.result.profilePicture)
     expect(picBeforeDelete.status).toBe(200)
 
-    const res = await request(app).delete(`/v1/admins/${user1._id}/profile-picture `)
+    const res = await request(app).delete(`/v1/system-admins/${user1._id}/profile-picture `)
       .set('authorization', 'Bearer ' + token).send()
 
     const pic = await fetch(uploadRes.body.result.profilePicture)

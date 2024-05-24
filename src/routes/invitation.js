@@ -5,14 +5,12 @@ import { createOne, patchOne, list, deleteOne } from 'mongoose-crudl'
 import { MethodNotAllowedError, ValidationError, AuthenticationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
-import AdminModel from '../models/Admin.js'
-
-const secrets = process.env.SECRETS.split(' ')
-const invitationTemplate = process.env.BLUEFOX_INVITATION_TEMPLATE
-
-export default (apiServer) => {
+export default ({
+  apiServer, AdminModel
+}) => {
+  const secrets = process.env.SECRETS.split(' ')
   const sendInvitation = async (email, token) => {
-    const url = invitationTemplate
+    const url = process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -21,7 +19,7 @@ export default (apiServer) => {
       },
       body: JSON.stringify({
         email,
-        data: { href: `${process.env.APP_URL}invitation/accept?token=${token}` }
+        data: { href: `${process.env.ADMIN_APP_URL}invitation/accept?token=${token}` }
       })
     })
     const res = await response.json()
@@ -34,7 +32,7 @@ export default (apiServer) => {
     return res
   }
 
-  apiServer.post('/v1/invitation/send', async req => {
+  apiServer.post('/v1/system-admins/invitation/send', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count !== 0) {
@@ -66,7 +64,7 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.post('/v1/invitation/resend', async req => {
+  apiServer.post('/v1/system-admins/invitation/resend', async req => {
     allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
@@ -93,7 +91,7 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.post('/v1/invitation/accept', async req => {
+  apiServer.post('/v1/system-admins/invitation/accept', async req => {
     const data = allowAccessTo(req, secrets, [{ type: 'invitation' }])
     const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
     if (response.result.count === 0) {

@@ -5,14 +5,12 @@ import { list, patchOne } from 'mongoose-crudl'
 import { AuthenticationError, ValidationError } from 'standard-api-errors'
 import allowAccessTo from 'bearer-jwt-auth'
 
-import AdminModel from '../models/Admin.js'
-
-const secrets = process.env.SECRETS.split(' ')
-const forgotPasswordTemplate = process.env.BLUEFOX_FORGOT_PASSWORD_TEMPLATE
-
-export default (apiServer) => {
+export default ({
+  apiServer, AdminModel
+}) => {
+  const secrets = process.env.SECRETS.split(' ')
   const sendForgotPassword = async (email, token) => {
-    const url = forgotPasswordTemplate
+    const url = process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -21,7 +19,7 @@ export default (apiServer) => {
       },
       body: JSON.stringify({
         email,
-        data: { href: `${process.env.APP_URL}forgot-password/reset?token=${token}` }
+        data: { href: `${process.env.ADMIN_APP_URL}forgot-password/reset?token=${token}` }
       })
     })
     const res = await response.json()
@@ -31,7 +29,7 @@ export default (apiServer) => {
     return res
   }
 
-  apiServer.post('/v1/forgot-password/send', async req => {
+  apiServer.post('/v1/system-admins/forgot-password/send', async req => {
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
       throw new AuthenticationError('Check user name')
@@ -54,7 +52,7 @@ export default (apiServer) => {
     }
   })
 
-  apiServer.post('/v1/forgot-password/reset', async req => {
+  apiServer.post('/v1/system-admins/forgot-password/reset', async req => {
     const data = allowAccessTo(req, secrets, [{ type: 'forgot-password' }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError("Validation error passwords didn't match ")

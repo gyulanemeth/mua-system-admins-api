@@ -5,12 +5,11 @@ import jwt from 'jsonwebtoken'
 import { list } from 'mongoose-crudl'
 import { AuthenticationError } from 'standard-api-errors'
 
-import AdminModel from '../models/Admin.js'
-
-const secrets = process.env.SECRETS.split(' ')
-
-export default (apiServer) => {
-  apiServer.post('/v1/login', async req => {
+export default ({
+  apiServer, AdminModel
+}) => {
+  const secrets = process.env.SECRETS.split(' ')
+  apiServer.post('/v1/system-admins/login', async req => {
     req.body.email = req.body.email.toLowerCase()
     req.body.password = crypto.createHash('md5').update(req.body.password).digest('hex')
     const findUser = await list(AdminModel, { email: req.body.email, password: req.body.password }, { select: { password: 0 } })
