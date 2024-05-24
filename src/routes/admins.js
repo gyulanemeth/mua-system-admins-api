@@ -33,7 +33,7 @@ export default async ({
     return res
   }
 
-  apiServer.get('/v1/admins/', async req => {
+  apiServer.get('/v1/system-admins/', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
     response.result.items = response.result.items.map(user => {
@@ -44,13 +44,13 @@ export default async ({
     return response
   })
 
-  apiServer.get('/v1/admins/:id', async req => {
+  apiServer.get('/v1/system-admins/:id', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const response = await readOne(AdminModel, { id: req.params.id }, { ...req.query, select: { password: 0 } })
     return response
   })
 
-  apiServer.delete('/v1/admins/:id', async req => {
+  apiServer.delete('/v1/system-admins/:id', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'delete' }])
     const adminCount = await AdminModel.count({})
     if (adminCount === 1) {
@@ -60,7 +60,7 @@ export default async ({
     return response
   })
 
-  apiServer.post('/v1/admins/permission/:permissionFor', async req => {
+  apiServer.post('/v1/system-admins/permission/:permissionFor', async req => {
     const tokenData = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
     const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
     const findUser = await list(AdminModel, { email: tokenData.user.email, password: hash })
@@ -80,7 +80,7 @@ export default async ({
     }
   })
 
-  apiServer.get('/v1/admins/:id/access-token', async req => {
+  apiServer.get('/v1/system-admins/:id/access-token', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
     const response = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
     const payload = {
@@ -99,7 +99,7 @@ export default async ({
     }
   })
 
-  apiServer.patch('/v1/admins/:id/name', async req => {
+  apiServer.patch('/v1/system-admins/:id/name', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
     await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
     return {
@@ -110,7 +110,7 @@ export default async ({
     }
   })
 
-  apiServer.patch('/v1/admins/:id/password', async req => {
+  apiServer.patch('/v1/system-admins/:id/password', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError('Validation error passwords didn\'t match.')
@@ -130,7 +130,7 @@ export default async ({
     }
   })
 
-  apiServer.patch('/v1/admins/:id/email', async req => {
+  apiServer.patch('/v1/system-admins/:id/email', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newEmail !== req.body.newEmailAgain) {
       throw new ValidationError('Validation error email didn\'t match.')
@@ -156,7 +156,7 @@ export default async ({
     }
   })
 
-  apiServer.patch('/v1/admins/:id/email-confirm', async req => {
+  apiServer.patch('/v1/system-admins/:id/email-confirm', async req => {
     const data = await allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'verfiy-email', user: { _id: req.params.id } }])
     await patchOne(AdminModel, { id: req.params.id }, { email: data.newEmail })
     return {
@@ -167,7 +167,7 @@ export default async ({
     }
   })
 
-  apiServer.postBinary('/v1/admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize: process.env.MAX_FILE_SIZE }, async req => {
+  apiServer.postBinary('/v1/system-admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize: process.env.MAX_FILE_SIZE }, async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
 
     const uploadParams = {
@@ -186,7 +186,7 @@ export default async ({
     }
   })
 
-  apiServer.delete('/v1/admins/:id/profile-picture', async req => {
+  apiServer.delete('/v1/system-admins/:id/profile-picture', async req => {
     allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
     const userData = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
     const key = userData.result.profilePicture.substring(userData.result.profilePicture.lastIndexOf('/') + 1)
