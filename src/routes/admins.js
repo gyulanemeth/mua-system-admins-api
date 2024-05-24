@@ -12,6 +12,7 @@ import aws from '../helpers/awsBucket.js'
 export default async ({
   apiServer, AdminModel
 }) => {
+  const secrets = process.env.SECRETS.split(' ')
   const s3 = await aws()
   const sendVerifyEmail = async (email, token) => {
     const url = process.env.ADMIN_BLUEFOX_VERIFY_EMAIL_TEMPLATE
@@ -34,7 +35,7 @@ export default async ({
   }
 
   apiServer.get('/v1/system-admins/', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
+    allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.params, req.query)
     response.result.items = response.result.items.map(user => {
       user.invitationAccepted = !!user.password
@@ -45,13 +46,13 @@ export default async ({
   })
 
   apiServer.get('/v1/system-admins/:id', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
+    allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await readOne(AdminModel, { id: req.params.id }, { ...req.query, select: { password: 0 } })
     return response
   })
 
   apiServer.delete('/v1/system-admins/:id', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'delete' }])
+    allowAccessTo(req, secrets, [{ type: 'delete' }])
     const adminCount = await AdminModel.count({})
     if (adminCount === 1) {
       throw new MethodNotAllowedError('Removing the last admin is not allowed')
@@ -61,7 +62,7 @@ export default async ({
   })
 
   apiServer.post('/v1/system-admins/permission/:permissionFor', async req => {
-    const tokenData = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
+    const tokenData = allowAccessTo(req, secrets, [{ type: 'admin' }])
     const hash = crypto.createHash('md5').update(req.body.password).digest('hex')
     const findUser = await list(AdminModel, { email: tokenData.user.email, password: hash })
     if (findUser.result.count === 0) {
@@ -71,7 +72,7 @@ export default async ({
       type: req.params.permissionFor,
       user: tokenData.user
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '5m' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '5m' })
     return {
       status: 200,
       result: {
@@ -81,7 +82,7 @@ export default async ({
   })
 
   apiServer.get('/v1/system-admins/:id/access-token', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }, { type: 'login', user: { _id: req.params.id } }])
     const response = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0 } })
     const payload = {
       type: 'admin',
@@ -90,7 +91,7 @@ export default async ({
         email: response.result.email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     return {
       status: 200,
       result: {
@@ -100,7 +101,7 @@ export default async ({
   })
 
   apiServer.patch('/v1/system-admins/:id/name', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     await patchOne(AdminModel, { id: req.params.id }, { name: req.body.name })
     return {
       status: 200,
@@ -111,7 +112,7 @@ export default async ({
   })
 
   apiServer.patch('/v1/system-admins/:id/password', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError('Validation error passwords didn\'t match.')
     }
@@ -131,7 +132,7 @@ export default async ({
   })
 
   apiServer.patch('/v1/system-admins/:id/email', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     if (req.body.newEmail !== req.body.newEmailAgain) {
       throw new ValidationError('Validation error email didn\'t match.')
     }
@@ -145,7 +146,7 @@ export default async ({
       user: response.result,
       newEmail: req.body.newEmail
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const mail = await sendVerifyEmail(req.body.newEmail, token)
     return {
       status: 200,
@@ -157,7 +158,7 @@ export default async ({
   })
 
   apiServer.patch('/v1/system-admins/:id/email-confirm', async req => {
-    const data = await allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'verfiy-email', user: { _id: req.params.id } }])
+    const data = await allowAccessTo(req, secrets, [{ type: 'verfiy-email', user: { _id: req.params.id } }])
     await patchOne(AdminModel, { id: req.params.id }, { email: data.newEmail })
     return {
       status: 200,
@@ -168,7 +169,7 @@ export default async ({
   })
 
   apiServer.postBinary('/v1/system-admins/:id/profile-picture', { mimeTypes: ['image/jpeg', 'image/png', 'image/gif'], fieldName: 'profilePicture', maxFileSize: process.env.MAX_FILE_SIZE }, async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
 
     const uploadParams = {
       Bucket: process.env.AWS_BUCKET_NAME,
@@ -187,7 +188,7 @@ export default async ({
   })
 
   apiServer.delete('/v1/system-admins/:id/profile-picture', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin', user: { _id: req.params.id } }])
+    allowAccessTo(req, secrets, [{ type: 'admin', user: { _id: req.params.id } }])
     const userData = await readOne(AdminModel, { id: req.params.id }, { select: { password: 0, email: 0 } })
     const key = userData.result.profilePicture.substring(userData.result.profilePicture.lastIndexOf('/') + 1)
 

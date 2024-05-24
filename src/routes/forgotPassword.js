@@ -8,6 +8,7 @@ import allowAccessTo from 'bearer-jwt-auth'
 export default ({
   apiServer, AdminModel
 }) => {
+  const secrets = process.env.SECRETS.split(' ')
   const sendForgotPassword = async (email, token) => {
     const url = process.env.ADMIN_BLUEFOX_FORGOT_PASSWORD_TEMPLATE
     const response = await fetch(url, {
@@ -40,7 +41,7 @@ export default ({
         email: response.result.items[0].email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const mail = await sendForgotPassword(response.result.items[0].email, token)
     return {
       status: 200,
@@ -52,7 +53,7 @@ export default ({
   })
 
   apiServer.post('/v1/system-admins/forgot-password/reset', async req => {
-    const data = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'forgot-password' }])
+    const data = allowAccessTo(req, secrets, [{ type: 'forgot-password' }])
     if (req.body.newPassword !== req.body.newPasswordAgain) {
       throw new ValidationError("Validation error passwords didn't match ")
     }
@@ -65,7 +66,7 @@ export default ({
         email: updatedAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     return {
       status: 200,
       result: {

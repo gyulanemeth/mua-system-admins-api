@@ -8,6 +8,7 @@ import { AuthenticationError } from 'standard-api-errors'
 export default ({
   apiServer, AdminModel
 }) => {
+  const secrets = process.env.SECRETS.split(' ')
   apiServer.post('/v1/system-admins/login', async req => {
     req.body.email = req.body.email.toLowerCase()
     req.body.password = crypto.createHash('md5').update(req.body.password).digest('hex')
@@ -24,7 +25,7 @@ export default ({
         email: findUser.result.items[0].email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     return {
       status: 200,
       result: {

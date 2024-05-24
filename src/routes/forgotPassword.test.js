@@ -21,6 +21,7 @@ const TestModel = mongoose.model('Test', new mongoose.Schema({
 
 describe('/v1/system-admins/forgot-password/', () => {
   let app
+  let secrets
   beforeAll(async () => {
     await mongooseMemoryServer.start()
     await mongooseMemoryServer.connect('test-db')
@@ -40,6 +41,7 @@ describe('/v1/system-admins/forgot-password/', () => {
     process.env.CDN_BASE_URL = 'http://localhost:10006/'
     process.env.TEST_STATIC_SERVER_URL = 'http://localhost:10006/'
     process.env.ADMIN_APP_URL = 'http://admins.emailfox.link/'
+    secrets = process.env.SECRETS.split(' ')
     app = createApiServer((e) => {
       return {
         status: e.status,
@@ -131,7 +133,7 @@ describe('/v1/system-admins/forgot-password/', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/system-admins/forgot-password/reset')
@@ -149,7 +151,7 @@ describe('/v1/system-admins/forgot-password/', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/system-admins/forgot-password/reset')
@@ -167,7 +169,7 @@ describe('/v1/system-admins/forgot-password/', () => {
     const user2 = new TestModel({ email: 'user2@gmail.com', name: 'user2', password: hash2 })
     await user2.save()
 
-    const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, process.env.SECRETS.split(' ')[0])
+    const token = jwt.sign({ type: 'value', user: { _id: user2._id, email: user2.email } }, secrets[0])
 
     const res = await request(app)
       .post('/v1/system-admins/forgot-password/reset')
@@ -180,7 +182,7 @@ describe('/v1/system-admins/forgot-password/', () => {
     const hash1 = crypto.createHash('md5').update('user1Password').digest('hex')
     const user1 = new TestModel({ email: 'user1@gmail.com', name: 'user1', password: hash1 })
     await user1.save()
-    const token = jwt.sign({ type: 'forgot-password', user: { _id: user1._id, email: 'user4@gmail.com' } }, process.env.SECRETS.split(' ')[0])
+    const token = jwt.sign({ type: 'forgot-password', user: { _id: user1._id, email: 'user4@gmail.com' } }, secrets[0])
     const res = await request(app)
       .post('/v1/system-admins/forgot-password/reset')
       .set('authorization', 'Bearer ' + token)

@@ -8,6 +8,7 @@ import allowAccessTo from 'bearer-jwt-auth'
 export default ({
   apiServer, AdminModel
 }) => {
+  const secrets = process.env.SECRETS.split(' ')
   const sendInvitation = async (email, token) => {
     const url = process.env.ADMIN_BLUEFOX_INVITATION_TEMPLATE
     const response = await fetch(url, {
@@ -32,7 +33,7 @@ export default ({
   }
 
   apiServer.post('/v1/system-admins/invitation/send', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
+    allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count !== 0) {
       throw new MethodNotAllowedError('User exist')
@@ -46,7 +47,7 @@ export default ({
         email: newAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     let mail
     try {
       mail = await sendInvitation(newAdmin.result.email, token)
@@ -64,7 +65,7 @@ export default ({
   })
 
   apiServer.post('/v1/system-admins/invitation/resend', async req => {
-    allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'admin' }])
+    allowAccessTo(req, secrets, [{ type: 'admin' }])
     const response = await list(AdminModel, req.body, { select: { password: 0 } })
     if (response.result.count === 0) {
       throw new MethodNotAllowedError("User dosen't exist")
@@ -79,7 +80,7 @@ export default ({
         email: response.result.items[0].email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     const mail = await sendInvitation(response.result.items[0].email, token)
     return {
       status: 201,
@@ -91,7 +92,7 @@ export default ({
   })
 
   apiServer.post('/v1/system-admins/invitation/accept', async req => {
-    const data = allowAccessTo(req, process.env.SECRETS.split(' '), [{ type: 'invitation' }])
+    const data = allowAccessTo(req, secrets, [{ type: 'invitation' }])
     const response = await list(AdminModel, { id: data.user._id, email: data.user.email }, req.query)
     if (response.result.count === 0) {
       throw new AuthenticationError('Check user name')
@@ -112,7 +113,7 @@ export default ({
         email: updatedAdmin.result.email
       }
     }
-    const token = jwt.sign(payload, process.env.SECRETS.split(' ')[0], { expiresIn: '24h' })
+    const token = jwt.sign(payload, secrets[0], { expiresIn: '24h' })
     return {
       status: 200,
       result: {
