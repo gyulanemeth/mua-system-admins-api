@@ -38,7 +38,7 @@ describe('/v1/system-admins/login// ', () => {
     process.env.AWS_SECRET_ACCESS_KEY = '<your_aws_secret_access_key>'
     process.env.CDN_BASE_URL = 'http://localhost:10006/'
     process.env.TEST_STATIC_SERVER_URL = 'http://localhost:10006/'
-    process.env.ADMIN_APP_URL = 'http://admins.emailfox.link/'
+    process.env.APP_URL = 'http://app.emailfox.link/'
     app = createApiServer((e) => {
       return {
         status: e.status,
