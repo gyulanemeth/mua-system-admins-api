@@ -19,7 +19,7 @@ export default ({
       },
       body: JSON.stringify({
         email,
-        data: { href: `${process.env.ADMIN_APP_URL}forgot-password/reset?token=${token}` }
+        data: { href: `${process.env.APP_URL}system-admins-forgot-password/reset?token=${token}` }
       })
     })
     const res = await response.json()
